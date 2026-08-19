@@ -150,6 +150,30 @@ test("native theme generation rejects normalized token path collisions", () => {
   }
 });
 
+test("native theme generation rejects prototype-polluting token paths", () => {
+  const plugin = nativeThemePlugin({
+    filename: "themes.ts",
+    themes: ["light"],
+    themeModifier: "theme",
+  });
+
+  for (const id of ["__proto__.polluted", "color.__proto__.polluted"]) {
+    assert.throws(
+      () =>
+        plugin.build({
+          resolver: {
+            apply: () => ({
+              [id]: { id, $type: "color", $value: black },
+            }),
+          },
+          outputFile: () => undefined,
+        }),
+      /cannot contain "__proto__"/,
+    );
+    assert.equal(Object.prototype.polluted, undefined);
+  }
+});
+
 test(
   "watch mode ignores initial adds and follows config source changes",
   { timeout: 20_000 },

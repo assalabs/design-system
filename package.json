@@ -10,6 +10,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "turbo lint",
+    "publish-packages": "changeset publish",
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
     "test:pack": "node scripts/verify-design-system-pack.mjs",

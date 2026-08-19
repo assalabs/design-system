@@ -161,6 +161,12 @@ function setNestedValue(
   value: unknown,
   tokenId: string,
 ): void {
+  if (path.includes("__proto__")) {
+    throw new Error(
+      `Native token path "${path.join(".")}" cannot contain "__proto__".`,
+    );
+  }
+
   let current = target;
 
   for (const rawSegment of path.slice(0, -1)) {
