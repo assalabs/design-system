@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -235,20 +235,32 @@ test(
       );
       assert.doesNotMatch(output, /No default export/);
 
+      await unlink(configPath);
+      await delay(150);
+      await writeFile(
+        configPath,
+        watcherConfig("./tokens-b/theme.resolver.json"),
+      );
+      await waitFor(
+        () => occurrences(output, "Built 3 design-system outputs.") >= 3,
+        () => output,
+      );
+      assert.doesNotMatch(output, /config was not found/);
+
       const activeResolver = join(tokensB, "theme.resolver.json");
       await writeFile(
         activeResolver,
         `${await readFile(activeResolver, "utf8")}\n`,
       );
       await waitFor(
-        () => occurrences(output, "Built 3 design-system outputs.") >= 3,
+        () => occurrences(output, "Built 3 design-system outputs.") >= 4,
         () => output,
       );
 
       const oldResolver = join(tokensA, "theme.resolver.json");
       await writeFile(oldResolver, `${await readFile(oldResolver, "utf8")}\n`);
       await delay(300);
-      assert.equal(occurrences(output, "Built 3 design-system outputs."), 3);
+      assert.equal(occurrences(output, "Built 3 design-system outputs."), 4);
     } finally {
       if (child && child.exitCode === null) {
         child.kill("SIGTERM");

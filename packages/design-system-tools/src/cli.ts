@@ -138,7 +138,7 @@ async function watch(configArgument?: string): Promise<void> {
     ignoreInitial: true,
   });
   configWatcher.on("all", (event, path) => {
-    if (["add", "change", "unlink"].includes(event)) {
+    if (["add", "change"].includes(event)) {
       void rebuild(resolve(path) === configPath);
     }
   });
