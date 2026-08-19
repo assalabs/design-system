@@ -101,18 +101,14 @@ try {
     temporaryRoot,
   );
 
-  const createPackage = JSON.parse(
-    await readFile(
-      join(
-        temporaryRoot,
-        "node_modules/@assalabs/create-design-system/package.json",
-      ),
-      "utf8",
-    ),
+  const toolsPackage = JSON.parse(
+    execFileSync("tar", ["-xOf", toolsArchive, "package/package.json"], {
+      encoding: "utf8",
+    }),
   );
   const themePackagePath = join(fixtureRoot, "packages/theme/package.json");
   const themePackage = JSON.parse(await readFile(themePackagePath, "utf8"));
-  const expectedToolsRange = `^${createPackage.version}`;
+  const expectedToolsRange = `^${toolsPackage.version}`;
 
   if (
     themePackage.devDependencies["@assalabs/design-system-tools"] !==

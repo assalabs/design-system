@@ -1,22 +1,19 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import toolsPackage from "../../design-system-tools/package.json" with { type: "json" };
 import type { ScaffoldOptions } from "./types.js";
 
 const templateDirectory = fileURLToPath(
   new URL("../template/theme/", import.meta.url),
 );
 
-async function currentPackageVersion(): Promise<string> {
-  const packageJson = JSON.parse(
-    await readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ) as { version?: unknown };
-
-  if (typeof packageJson.version !== "string" || !packageJson.version) {
-    throw new Error("Could not resolve the create-design-system version.");
+function currentToolsVersion(): string {
+  if (typeof toolsPackage.version !== "string" || !toolsPackage.version) {
+    throw new Error("Could not resolve the design-system-tools version.");
   }
 
-  return packageJson.version;
+  return toolsPackage.version;
 }
 
 async function readTemplateFiles(
@@ -192,7 +189,7 @@ export default defineDesignSystem({
 export async function renderThemePackage(
   options: ScaffoldOptions,
 ): Promise<Map<string, string>> {
-  const toolsVersion = await currentPackageVersion();
+  const toolsVersion = currentToolsVersion();
   const files = replacePlaceholders(
     await readTemplateFiles(templateDirectory, templateDirectory),
     options,
