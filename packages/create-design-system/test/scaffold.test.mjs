@@ -28,15 +28,22 @@ test("creates a web and native theme package in an empty workspace", async () =>
     const packageJson = JSON.parse(
       await readFile(join(directory, "packages/theme/package.json"), "utf8"),
     );
-    const createPackageJson = JSON.parse(
-      await readFile(new URL("../package.json", import.meta.url), "utf8"),
+    const toolsPackageJson = JSON.parse(
+      await readFile(
+        new URL("../../design-system-tools/package.json", import.meta.url),
+        "utf8",
+      ),
     );
     assert.equal(packageJson.name, "@example/theme");
     assert.equal(
       packageJson.devDependencies["@assalabs/design-system-tools"],
-      `^${createPackageJson.version}`,
+      `^${toolsPackageJson.version}`,
     );
     assert.equal(packageJson.exports["./css"], "./styles/generated.css");
+    assert.equal(
+      packageJson.scripts.typecheck,
+      "pnpm tokens:build && tsc --noEmit",
+    );
     assert.ok(packageJson.exports["./native"]);
     assert.deepEqual(result.directories, [join(directory, "packages/theme")]);
 
@@ -84,13 +91,26 @@ test("creates StyleX, Base UI, and Unistyles adapter packages", async () => {
       join(directory, "packages/ui-native/src/unistyles.ts"),
       "utf8",
     );
+    const textField = await readFile(
+      join(directory, "packages/ui-web/src/TextField.tsx"),
+      "utf8",
+    );
     assert.equal(
       themePackage.exports["./tokens.stylex.ts"],
       "./src/generated/tokens.stylex.ts",
     );
     assert.equal(webPackage.dependencies["@base-ui/react"], "^1.7.0");
     assert.equal(webPackage.dependencies["@stylexjs/stylex"], "^0.19.0");
+    const nativePackage = JSON.parse(
+      await readFile(
+        join(directory, "packages/ui-native/package.json"),
+        "utf8",
+      ),
+    );
+    assert.equal(nativePackage.peerDependencies["react-native"], ">=0.78.0");
     assert.match(nativeConfig, /from "@example\/theme\/native"/);
+    assert.match(textField, /invalid=\{Boolean\(error\)\}/);
+    assert.match(textField, /match=\{true\}/);
     assert.doesNotMatch(nativeConfig, /{{[A-Z_]+}}/);
   });
 });
@@ -114,7 +134,17 @@ test("creates a CSS Modules Base UI package", async () => {
       "utf8",
     );
     assert.match(css, /var\(--ex-color-action-primary-background\)/);
+    assert.match(css, /display: inline-flex/);
+    assert.match(css, /box-sizing: border-box/);
+    assert.match(css, /align-items: center/);
     assert.doesNotMatch(css, /{{[A-Z_]+}}/);
+
+    const textField = await readFile(
+      join(directory, "packages/ui-web/src/TextField.tsx"),
+      "utf8",
+    );
+    assert.match(textField, /invalid=\{Boolean\(error\)\}/);
+    assert.match(textField, /match=\{true\}/);
   });
 });
 

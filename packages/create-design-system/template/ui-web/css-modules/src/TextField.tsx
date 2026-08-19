@@ -19,7 +19,7 @@ export function TextField({
   ...controlProps
 }: TextFieldProps) {
   return (
-    <Field.Root className={styles.field}>
+    <Field.Root className={styles.field} invalid={Boolean(error)}>
       <Field.Label className={styles.label}>{label}</Field.Label>
       <Field.Control {...controlProps} className={styles.input} />
       {description ? (
@@ -28,7 +28,9 @@ export function TextField({
         </Field.Description>
       ) : null}
       {error ? (
-        <Field.Error className={styles.errorText}>{error}</Field.Error>
+        <Field.Error className={styles.errorText} match={true}>
+          {error}
+        </Field.Error>
       ) : null}
     </Field.Root>
   );

@@ -16,10 +16,11 @@ function channelLuminance(channel: number): number {
 function relativeLuminance(color: DtcgColor, tokenId: string): number {
   if (
     color.colorSpace !== "srgb" ||
-    color.components.some((component) => component === "none")
+    color.components.some((component) => component === "none") ||
+    (color.alpha ?? 1) !== 1
   ) {
     throw new Error(
-      `Contrast validation requires concrete srgb colors; ${tokenId} is not supported.`,
+      `Contrast validation requires opaque concrete srgb colors; ${tokenId} is not supported.`,
     );
   }
 

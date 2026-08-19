@@ -185,7 +185,7 @@ try {
   );
   await writeFile(
     join(stylexAppRoot, "vite.config.ts"),
-    'import stylex from "@stylexjs/unplugin";\nimport react from "@vitejs/plugin-react";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [stylex.vite({ useCSSLayers: true, runtimeInjection: false, treeshakeCompensation: true, unstable_moduleResolution: { type: "commonJS", rootDir: new URL("../..", import.meta.url).pathname } }), react()] });\n',
+    'import stylex from "@stylexjs/unplugin";\nimport react from "@vitejs/plugin-react";\nimport { fileURLToPath } from "node:url";\nimport { defineConfig } from "vite";\n\nexport default defineConfig({ plugins: [stylex.vite({ useCSSLayers: true, runtimeInjection: false, treeshakeCompensation: true, unstable_moduleResolution: { type: "commonJS", rootDir: fileURLToPath(new URL("../..", import.meta.url)) } }), react()] });\n',
   );
   run("pnpm", ["install", "--ignore-scripts"], fixtureRoot);
   run("pnpm", ["--filter", "@fixture/theme", "build"], fixtureRoot);

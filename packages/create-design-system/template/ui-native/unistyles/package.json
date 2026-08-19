@@ -21,7 +21,7 @@
   "peerDependencies": {
     "@react-native/normalize-colors": "*",
     "react": ">=19",
-    "react-native": ">=0.76.0",
+    "react-native": ">=0.78.0",
     "react-native-edge-to-edge": "*",
     "react-native-nitro-modules": "*",
     "react-native-reanimated": "*",

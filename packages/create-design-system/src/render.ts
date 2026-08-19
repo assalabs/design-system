@@ -109,7 +109,7 @@ function packageJson(options: ScaffoldOptions, toolsVersion: string): string {
         test: "assalabs-ds tokens check",
         "tokens:build": "assalabs-ds tokens build",
         "tokens:check": "assalabs-ds tokens check",
-        typecheck: "tsc --noEmit",
+        typecheck: "pnpm tokens:build && tsc --noEmit",
       },
       devDependencies: {
         "@assalabs/design-system-tools": `^${toolsVersion}`,

@@ -8,7 +8,11 @@ export {
   generateDesignSystem,
   writeGeneratedOutputs,
 } from "./build.js";
-export { nativeThemePlugin, toNativeTokenValue } from "./nativePlugin.js";
+export {
+  assertNativeThemeNames,
+  nativeThemePlugin,
+  toNativeTokenValue,
+} from "./nativePlugin.js";
 export { contrastRatio, validateResolvedThemes } from "./validation.js";
 export type {
   ContrastPair,

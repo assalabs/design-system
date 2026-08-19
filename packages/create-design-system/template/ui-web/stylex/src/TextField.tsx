@@ -20,7 +20,7 @@ export function TextField({
   ...controlProps
 }: TextFieldProps) {
   return (
-    <Field.Root {...stylex.props(styles.field)}>
+    <Field.Root invalid={Boolean(error)} {...stylex.props(styles.field)}>
       <Field.Label {...stylex.props(styles.label)}>{label}</Field.Label>
       <Field.Control {...controlProps} {...stylex.props(styles.input)} />
       {description ? (
@@ -29,7 +29,9 @@ export function TextField({
         </Field.Description>
       ) : null}
       {error ? (
-        <Field.Error {...stylex.props(styles.errorText)}>{error}</Field.Error>
+        <Field.Error match={true} {...stylex.props(styles.errorText)}>
+          {error}
+        </Field.Error>
       ) : null}
     </Field.Root>
   );

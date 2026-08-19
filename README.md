@@ -4,7 +4,8 @@ Generate validated design tokens and platform-owned UI for web and React
 Native.
 
 > Early preview. The token compiler is published at `0.1.x`; adapter and
-> component generation is being prepared for the next release.
+> component generation are available in this repository and are planned for
+> the next minor release.
 
 ## What it creates
 
@@ -55,7 +56,7 @@ Assa Labs component package.
 
 ## Repository development
 
-Requires Node.js 22 or newer and pnpm 10.13.1.
+Requires Node.js 22 or newer. Use Node.js 24 and pnpm 10.13.1 to match CI.
 
 ```bash
 pnpm install

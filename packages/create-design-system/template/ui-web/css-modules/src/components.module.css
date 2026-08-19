@@ -112,6 +112,9 @@
 }
 
 .switch {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
   width: 44px;
   height: 24px;
   padding: 2px;

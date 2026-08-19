@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { assertNativeThemeNames } from "./nativePlugin.js";
 import type { DesignSystemConfig, LoadedDesignSystemConfig } from "./types.js";
 
 export const DEFAULT_CONFIG_FILENAME = "design-system.config.mjs";
@@ -26,6 +27,10 @@ export function defineDesignSystem(
     throw new Error(
       `Default theme "${config.defaultTheme}" is not present in themes.`,
     );
+  }
+
+  if (config.outputs.native) {
+    assertNativeThemeNames(config.themes);
   }
 
   if (!config.outputs.css && !config.outputs.native) {
