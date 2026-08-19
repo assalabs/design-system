@@ -221,6 +221,8 @@ test(
       await delay(200);
       assert.equal(occurrences(output, "Built 3 design-system outputs."), 1);
 
+      await writeFile(configPath, "");
+      await delay(25);
       await writeFile(
         configPath,
         watcherConfig("./tokens-b/theme.resolver.json"),
@@ -231,6 +233,7 @@ test(
           output.includes("tokens-b"),
         () => output,
       );
+      assert.doesNotMatch(output, /No default export/);
 
       const activeResolver = join(tokensB, "theme.resolver.json");
       await writeFile(

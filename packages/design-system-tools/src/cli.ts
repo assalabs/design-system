@@ -66,6 +66,10 @@ async function watch(configArgument?: string): Promise<void> {
     directory: string,
   ): Promise<ReturnType<typeof chokidar.watch>> => {
     const nextWatcher = chokidar.watch(directory, {
+      awaitWriteFinish: {
+        stabilityThreshold: 100,
+        pollInterval: 10,
+      },
       ignoreInitial: true,
       ignored: (path, stats) =>
         Boolean(stats?.isFile() && !path.endsWith(".json")),
@@ -126,7 +130,13 @@ async function watch(configArgument?: string): Promise<void> {
   await rebuild();
   tokenWatcher = await createTokenWatcher(watchedTokensDirectory);
   const configPath = loaded.configPath;
-  const configWatcher = chokidar.watch(configPath, { ignoreInitial: true });
+  const configWatcher = chokidar.watch(configPath, {
+    awaitWriteFinish: {
+      stabilityThreshold: 100,
+      pollInterval: 10,
+    },
+    ignoreInitial: true,
+  });
   configWatcher.on("all", (event, path) => {
     if (["add", "change", "unlink"].includes(event)) {
       void rebuild(resolve(path) === configPath);
