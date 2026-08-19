@@ -1,0 +1,81 @@
+{
+  "color": {
+    "surface": {
+      "$type": "color",
+      "canvas": { "$value": "{color.primitive.neutral.50}" },
+      "card": { "$value": "{color.primitive.white}" },
+      "elevated": { "$value": "{color.primitive.white}" },
+      "sunken": { "$value": "{color.primitive.neutral.100}" },
+      "overlay": { "$value": "{color.primitive.black-alpha.60}" }
+    },
+    "text": {
+      "$type": "color",
+      "primary": { "$value": "{color.primitive.neutral.950}" },
+      "secondary": { "$value": "{color.primitive.neutral.700}" },
+      "tertiary": { "$value": "{color.primitive.neutral.500}" },
+      "inverse": { "$value": "{color.primitive.white}" },
+      "link": { "$value": "{color.primitive.blue.700}" },
+      "on-action": { "$value": "{color.primitive.white}" }
+    },
+    "icon": {
+      "$type": "color",
+      "primary": { "$value": "{color.primitive.neutral.950}" },
+      "secondary": { "$value": "{color.primitive.neutral.700}" },
+      "inverse": { "$value": "{color.primitive.white}" }
+    },
+    "border": {
+      "$type": "color",
+      "subtle": { "$value": "{color.primitive.neutral.100}" },
+      "default": { "$value": "{color.primitive.neutral.300}" },
+      "strong": { "$value": "{color.primitive.neutral.700}" },
+      "focus": { "$value": "{color.primitive.blue.700}" }
+    },
+    "action": {
+      "primary": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.blue.700}" },
+        "foreground": { "$value": "{color.primitive.white}" },
+        "pressed": { "$value": "{color.primitive.neutral.950}" },
+        "disabled-background": { "$value": "{color.primitive.neutral.300}" },
+        "disabled-foreground": { "$value": "{color.primitive.neutral.700}" }
+      },
+      "secondary": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.white}" },
+        "foreground": { "$value": "{color.primitive.blue.700}" },
+        "pressed": { "$value": "{color.primitive.neutral.100}" }
+      },
+      "danger": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.red.600}" },
+        "foreground": { "$value": "{color.primitive.white}" }
+      }
+    },
+    "feedback": {
+      "success": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.green.100}" },
+        "foreground": { "$value": "{color.primitive.green.700}" }
+      },
+      "warning": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.amber.100}" },
+        "foreground": { "$value": "{color.primitive.amber.800}" }
+      },
+      "error": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.red.100}" },
+        "foreground": { "$value": "{color.primitive.red.600}" }
+      },
+      "info": {
+        "$type": "color",
+        "background": { "$value": "{color.primitive.neutral.100}" },
+        "foreground": { "$value": "{color.primitive.blue.700}" }
+      }
+    },
+    "focus": {
+      "$type": "color",
+      "ring": { "$value": "{color.primitive.blue.700}" }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "{{PACKAGE_SCOPE}}/ui-native",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./unistyles": "./src/unistyles.ts"
+  },
+  "sideEffects": [
+    "./src/unistyles.ts"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "{{PACKAGE_SCOPE}}/theme": "workspace:*"
+  },
+  "peerDependencies": {
+    "@react-native/normalize-colors": "*",
+    "react": ">=19",
+    "react-native": ">=0.76.0",
+    "react-native-edge-to-edge": "*",
+    "react-native-nitro-modules": "*",
+    "react-native-reanimated": "*",
+    "react-native-unistyles": "^3.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-native/normalize-colors": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-edge-to-edge": {
+      "optional": true
+    },
+    "react-native-nitro-modules": {
+      "optional": true
+    },
+    "react-native-reanimated": {
+      "optional": true
+    },
+    "react-native-unistyles": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/react": "^19.0.0",
+    "eslint": "^9.0.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.0.0"
+  }
+}
