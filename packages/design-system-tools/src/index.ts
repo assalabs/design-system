@@ -20,3 +20,16 @@ export type {
   GeneratedOutput,
   LoadedDesignSystemConfig,
 } from "./types.js";
+export { buildRamp, STEPS } from "./palette/ladder.js";
+export type { Ramp, Step, BuildRampResult } from "./palette/ladder.js";
+export { deriveSeeds, PaletteError } from "./palette/derive.js";
+export type { DerivedSeeds, PaletteInput, Seed } from "./palette/derive.js";
+export { SCAFFOLD_CONTRAST_PAIRS, selectRoles } from "./palette/semantic.js";
+export type {
+  ContrastReportEntry,
+  Primitives,
+  RoleId,
+  SelectRolesResult,
+  Theme,
+  TokenRef,
+} from "./palette/semantic.js";
