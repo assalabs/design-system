@@ -46,9 +46,7 @@ const STATUS_HUES = {
 
 function assertHex(value: string, flag: string): string {
   if (!HEX_RE.test(value)) {
-    throw new PaletteError(
-      `Invalid ${flag} color "${value}": expected #RRGGBB hex`,
-    );
+    throw new PaletteError(`--${flag} must be #RRGGBB (got "${value}")`);
   }
   return value.toLowerCase();
 }

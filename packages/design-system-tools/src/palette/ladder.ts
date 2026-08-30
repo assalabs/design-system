@@ -38,6 +38,12 @@ export const CHROMA_MULT: Record<Step, number> = {
 
 const MAX_CHROMA = 0.37;
 
+// ladder.ts stays a leaf module (no relative imports, so it loads standalone
+// under --experimental-strip-types); the hex guard is inlined and throws a
+// plain Error rather than importing PaletteError. The message keeps the same
+// shape as the PaletteError messages so users see one format.
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+
 export interface BuildRampOptions {
   anchor?: Step;
 }
@@ -80,11 +86,10 @@ export function buildRamp(
   seedHex: string,
   options: BuildRampOptions = {},
 ): BuildRampResult {
-  const parsed = parse(seedHex);
-  if (!parsed) {
-    throw new Error(`Invalid seed color: ${seedHex}`);
+  if (!HEX_RE.test(seedHex)) {
+    throw new Error(`buildRamp seed must be #RRGGBB (got "${seedHex}")`);
   }
-  const seed = oklch(parsed);
+  const seed = oklch(parse(seedHex)!);
   const achromatic = isAchromatic(seed.c) || isAchromatic(seed.h);
   const seedL = seed.l;
   const seedC = achromatic ? 0 : seed.c;

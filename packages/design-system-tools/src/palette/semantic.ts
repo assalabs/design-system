@@ -193,9 +193,12 @@ export function selectRoles(
       }
       if (ok) break;
     }
-    if (!ok && best) {
+    if (!ok) {
+      const detail = best
+        ? `${best.pair.fg}/${best.pair.bg} >= ${best.pair.minimum} (best ${best.ratio.toFixed(2)})`
+        : "its contrast pairs (empty candidate list)";
       throw new PaletteError(
-        `${theme}: no candidate for ${role} satisfies ${best.pair.fg}/${best.pair.bg} >= ${best.pair.minimum} (best ${best.ratio.toFixed(2)})`,
+        `${theme}: no candidate for ${role} satisfies ${detail}`,
       );
     }
   }
