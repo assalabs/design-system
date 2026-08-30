@@ -8,6 +8,8 @@ import {
   type TokenNormalized,
 } from "@terrazzo/parser";
 import css from "@terrazzo/plugin-css";
+import { emitStylex } from "./adapters/stylex/index.js";
+import { emitUnistyles } from "./adapters/unistyles/index.js";
 import { nativeThemePlugin } from "./nativePlugin.js";
 import type { GeneratedOutput, LoadedDesignSystemConfig } from "./types.js";
 import { validateResolvedThemes } from "./validation.js";
@@ -146,10 +148,24 @@ export async function generateDesignSystem(
     sources: parsed.sources,
   });
 
-  return result.outputFiles.map(({ filename, contents }) => ({
-    filename,
-    contents,
-  }));
+  const outputs: GeneratedOutput[] = result.outputFiles.map(
+    ({ filename, contents }) => ({
+      filename,
+      contents,
+    }),
+  );
+
+  // Adapters run after validateResolvedThemes so contrast failures surface
+  // before any adapter file is emitted.
+  if (config.outputs.stylex) {
+    outputs.push(emitStylex(config, resolvedThemes));
+  }
+
+  if (config.outputs.unistyles) {
+    outputs.push(...emitUnistyles(config, resolvedThemes));
+  }
+
+  return outputs;
 }
 
 export async function writeGeneratedOutputs(

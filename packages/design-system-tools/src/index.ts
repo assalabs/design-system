@@ -8,6 +8,8 @@ export {
   generateDesignSystem,
   writeGeneratedOutputs,
 } from "./build.js";
+export { emitStylex } from "./adapters/stylex/index.js";
+export { emitUnistyles } from "./adapters/unistyles/index.js";
 export {
   assertNativeThemeNames,
   nativeThemePlugin,
