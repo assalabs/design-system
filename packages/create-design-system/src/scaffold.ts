@@ -1,5 +1,6 @@
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
+import { generatePalette } from "@assalabs/design-system-tools";
 import {
   renderNativePackage,
   renderThemePackage,
@@ -22,6 +23,18 @@ function validateOptions(options: ScaffoldOptions): void {
     );
   }
 
+  if (!options.brand) {
+    throw new Error("--brand is required.");
+  }
+
+  if (options.template && !["expo", "web", "none"].includes(options.template)) {
+    throw new Error("--template must be expo, web, or none.");
+  }
+
+  if (options.bundler && !["rsbuild", "vite"].includes(options.bundler)) {
+    throw new Error("--bundler must be rsbuild or vite.");
+  }
+
   if (options.web && !["stylex", "css-modules", "none"].includes(options.web)) {
     throw new Error("--web must be stylex, css-modules, or none.");
   }
@@ -31,14 +44,34 @@ function validateOptions(options: ScaffoldOptions): void {
   }
 }
 
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function scaffoldDesignSystem(
   options: ScaffoldOptions,
 ): Promise<ScaffoldResult> {
   validateOptions(options);
+
+  // Throws PaletteError on an unusable seed, before anything is written.
+  const palette = generatePalette({
+    brand: options.brand,
+    neutral: options.neutral,
+    accent: options.accent,
+  });
+
   const packages = [
     {
       path: "packages/theme",
-      files: await renderThemePackage(options),
+      files: await renderThemePackage(options, palette),
     },
     {
       path: "packages/ui-web",
@@ -53,17 +86,23 @@ export async function scaffoldDesignSystem(
       entry.files !== undefined,
   );
 
+  // App templates own the workspace root, so an existing root manifest means
+  // this is somebody else's monorepo and the template would fight it.
+  if (options.template && options.template !== "none") {
+    const rootManifest = resolve(options.cwd, "package.json");
+    if (await exists(rootManifest)) {
+      throw new Error(
+        `Refusing to overwrite existing file: ${rootManifest}. Use --template none inside an existing monorepo.`,
+      );
+    }
+  }
+
   for (const entry of packages) {
     const targetDirectory = resolve(options.cwd, entry.path);
-    try {
-      await access(targetDirectory);
+    if (await exists(targetDirectory)) {
       throw new Error(
         `Refusing to overwrite existing directory: ${targetDirectory}`,
       );
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw error;
-      }
     }
   }
 

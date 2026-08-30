@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -22,6 +29,8 @@ test("creates a web and native theme package in an empty workspace", async () =>
       name: "Example",
       scope: "@example",
       prefix: "ex",
+      template: "none",
+      brand: "#3366ff",
     });
 
     assert.ok(result.files.includes("packages/theme/package.json"));
@@ -53,6 +62,8 @@ test("creates a web and native theme package in an empty workspace", async () =>
         name: "Example",
         scope: "@example",
         prefix: "ex",
+        template: "none",
+        brand: "#3366ff",
       }),
       /Refusing to overwrite existing directory/,
     );
@@ -66,6 +77,8 @@ test("creates StyleX, Base UI, and Unistyles adapter packages", async () => {
       name: "Example",
       scope: "@example",
       prefix: "ex",
+      template: "none",
+      brand: "#3366ff",
       web: "stylex",
       native: "unistyles",
     });
@@ -75,9 +88,6 @@ test("creates StyleX, Base UI, and Unistyles adapter packages", async () => {
       join(directory, "packages/ui-web"),
       join(directory, "packages/ui-native"),
     ]);
-    assert.ok(
-      result.files.includes("packages/theme/src/generated/tokens.stylex.ts"),
-    );
     assert.ok(result.files.includes("packages/ui-web/src/Button.tsx"));
     assert.ok(result.files.includes("packages/ui-native/src/Button.tsx"));
 
@@ -99,6 +109,26 @@ test("creates StyleX, Base UI, and Unistyles adapter packages", async () => {
       themePackage.exports["./tokens.stylex.ts"],
       "./src/generated/tokens.stylex.ts",
     );
+    assert.equal(
+      themePackage.exports["./unistyles"],
+      "./src/generated/unistyles.ts",
+    );
+    assert.equal(themePackage.peerDependencies["@stylexjs/stylex"], "^0.19.0");
+    assert.equal(
+      themePackage.peerDependencies["react-native-unistyles"],
+      "^3.3.0",
+    );
+    assert.doesNotMatch(themePackage.scripts.build, /tokens\.stylex\.ts/);
+    assert.doesNotMatch(themePackage.scripts.build, /generated\/unistyles\.ts/);
+    const themeConfig = await readFile(
+      join(directory, "packages/theme/design-system.config.mjs"),
+      "utf8",
+    );
+    assert.match(
+      themeConfig,
+      /stylex: \{ file: "src\/generated\/tokens\.stylex\.ts" \}/,
+    );
+    assert.match(themeConfig, /unistyles: \{ dir: "src\/generated\/" \}/);
     assert.equal(webPackage.dependencies["@base-ui/react"], "^1.7.0");
     assert.equal(webPackage.dependencies["@stylexjs/stylex"], "^0.19.0");
     const nativePackage = JSON.parse(
@@ -122,6 +152,8 @@ test("creates a CSS Modules Base UI package", async () => {
       name: "Example",
       scope: "@example",
       prefix: "ex",
+      template: "none",
+      brand: "#3366ff",
       web: "css-modules",
       native: "none",
     });
@@ -158,9 +190,73 @@ test("preflights every target and leaves no partial package", async () => {
         name: "Example",
         scope: "@example",
         prefix: "ex",
+        template: "none",
+        brand: "#3366ff",
         web: "stylex",
       }),
       /Refusing to overwrite existing directory/,
+    );
+    await assert.rejects(access(join(directory, "packages/theme")));
+  });
+});
+
+test("aliases color.brand.primary to the generated brand anchor step", async () => {
+  // `#123456` anchors at 900 and `#fff5f5` at 50; a hardcoded `.500` would
+  // alias the brand token to a colour the user never picked.
+  for (const [brand, anchor] of [
+    ["#123456", 900],
+    ["#fff5f5", 50],
+    ["#00d4ff", 300],
+  ]) {
+    await withWorkspace(async (directory) => {
+      await scaffoldDesignSystem({
+        cwd: directory,
+        name: "Example",
+        scope: "@example",
+        prefix: "ex",
+        template: "none",
+        brand,
+      });
+
+      const base = JSON.parse(
+        await readFile(
+          join(directory, "packages/theme/tokens/semantic/base.tokens.json"),
+          "utf8",
+        ),
+      );
+      assert.equal(
+        base.color.brand.primary.$value,
+        `{color.primitive.brand.${anchor}}`,
+      );
+
+      const primitives = JSON.parse(
+        await readFile(
+          join(
+            directory,
+            "packages/theme/tokens/primitives/colors.tokens.json",
+          ),
+          "utf8",
+        ),
+      );
+      assert.ok(primitives.color.primitive.brand[String(anchor)]);
+    });
+  }
+});
+
+test("refuses an app template inside an existing monorepo", async () => {
+  await withWorkspace(async (directory) => {
+    await writeFile(join(directory, "package.json"), "{}\n", "utf8");
+
+    await assert.rejects(
+      scaffoldDesignSystem({
+        cwd: directory,
+        name: "Example",
+        scope: "@example",
+        prefix: "ex",
+        template: "expo",
+        brand: "#3366ff",
+      }),
+      /Refusing to overwrite existing file/,
     );
     await assert.rejects(access(join(directory, "packages/theme")));
   });

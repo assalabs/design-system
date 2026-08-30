@@ -1,12 +1,26 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  SCAFFOLD_CONTRAST_PAIRS,
+  type PaletteResult,
+} from "@assalabs/design-system-tools";
 import toolsPackage from "../../design-system-tools/package.json" with { type: "json" };
 import type { ScaffoldOptions } from "./types.js";
+import { resolveThemeWiring, type ThemeWiring } from "./wiring.js";
 
 const templateDirectory = fileURLToPath(
   new URL("../template/theme/", import.meta.url),
 );
+
+/**
+ * Placeholder the template ships instead of a step number, so a scaffold that
+ * ever skipped the anchor retarget fails loudly at `tokens build` with an
+ * unresolved alias rather than silently aliasing the wrong swatch.
+ */
+const BRAND_ANCHOR_PLACEHOLDER = "{color.primitive.brand.ANCHOR}";
+
+const BASE_TOKENS_FILE = "tokens/semantic/base.tokens.json";
 
 function currentToolsVersion(): string {
   if (typeof toolsPackage.version !== "string" || !toolsPackage.version) {
@@ -14,6 +28,16 @@ function currentToolsVersion(): string {
   }
 
   return toolsPackage.version;
+}
+
+function appName(value: string): string {
+  return (
+    value
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "app"
+  );
 }
 
 async function readTemplateFiles(
@@ -49,6 +73,10 @@ function replacePlaceholders(
     ["{{PACKAGE_SCOPE}}", options.scope],
     ["{{PACKAGE_NAME}}", `${options.scope}/theme`],
     ["{{PREFIX}}", options.prefix],
+    ["{{scope}}", options.scope],
+    ["{{prefix}}", options.prefix],
+    ["{{TOOLS_VERSION}}", currentToolsVersion()],
+    ["{{APP_NAME}}", appName(options.name)],
   ]);
 
   return new Map(
@@ -75,8 +103,30 @@ async function renderAdapterPackage(
   );
 }
 
-function packageJson(options: ScaffoldOptions, toolsVersion: string): string {
-  const usesStyleX = options.web === "stylex";
+/**
+ * Point `color.brand.primary` at the step the generated brand ramp actually
+ * anchors the seed on. Hardcoding `.500` is wrong for any seed that is not
+ * mid-lightness: `#123456` anchors at 900 and `#fff5f5` at 50, and nothing
+ * downstream catches it (`color.brand.primary` is in no `requiredTokens` and no
+ * `contrastPairs`), so the mistake would ship as a silently wrong brand colour.
+ */
+function retargetBrandPrimary(source: string, anchor: number): string {
+  if (!source.includes(BRAND_ANCHOR_PLACEHOLDER)) {
+    throw new Error(
+      `${BASE_TOKENS_FILE} is missing "${BRAND_ANCHOR_PLACEHOLDER}"; the brand anchor cannot be retargeted.`,
+    );
+  }
+
+  return source
+    .split(BRAND_ANCHOR_PLACEHOLDER)
+    .join(`{color.primitive.brand.${anchor}}`);
+}
+
+function packageJson(
+  options: ScaffoldOptions,
+  wiring: ThemeWiring,
+  toolsVersion: string,
+): string {
   return `${JSON.stringify(
     {
       name: `${options.scope}/theme`,
@@ -86,31 +136,23 @@ function packageJson(options: ScaffoldOptions, toolsVersion: string): string {
       main: "./dist/index.js",
       types: "./dist/index.d.ts",
       style: "./styles/generated.css",
-      exports: {
-        ".": {
-          types: "./dist/index.d.ts",
-          import: "./dist/index.js",
-        },
-        "./native": {
-          types: "./dist/native.d.ts",
-          import: "./dist/native.js",
-        },
-        "./css": "./styles/generated.css",
-        ...(usesStyleX
-          ? { "./tokens.stylex.ts": "./src/generated/tokens.stylex.ts" }
-          : {}),
-      },
+      exports: wiring.exports,
       sideEffects: ["./styles/generated.css"],
       scripts: {
-        build:
-          "assalabs-ds tokens build && tsup src/index.ts src/native.ts --format esm --dts --clean",
-        dev: 'concurrently --kill-others-on-fail "assalabs-ds tokens watch" "tsup src/index.ts src/native.ts --format esm --dts --watch"',
+        build: `assalabs-ds tokens build && tsup ${wiring.tsupEntries.join(" ")} --format esm --dts --clean`,
+        dev: `concurrently --kill-others-on-fail "assalabs-ds tokens watch" "tsup ${wiring.tsupEntries.join(" ")} --format esm --dts --watch"`,
         lint: "eslint .",
         test: "assalabs-ds tokens check",
         "tokens:build": "assalabs-ds tokens build",
         "tokens:check": "assalabs-ds tokens check",
         typecheck: "pnpm tokens:build && tsc --noEmit",
       },
+      ...(Object.keys(wiring.peerDependencies).length > 0
+        ? {
+            peerDependencies: wiring.peerDependencies,
+            peerDependenciesMeta: wiring.peerDependenciesMeta,
+          }
+        : {}),
       devDependencies: {
         "@assalabs/design-system-tools": `^${toolsVersion}`,
         "@tsconfig/recommended": "^1.0.8",
@@ -120,7 +162,7 @@ function packageJson(options: ScaffoldOptions, toolsVersion: string): string {
         tsup: "^8.5.1",
         typescript: "^6.0.0",
         "typescript-eslint": "^8.0.0",
-        ...(usesStyleX ? { "@stylexjs/stylex": "^0.19.0" } : {}),
+        ...wiring.devDependencies,
       },
     },
     null,
@@ -128,7 +170,33 @@ function packageJson(options: ScaffoldOptions, toolsVersion: string): string {
   )}\n`;
 }
 
-function configFile(options: ScaffoldOptions): string {
+function configFile(options: ScaffoldOptions, wiring: ThemeWiring): string {
+  const outputs = [
+    `    css: "styles/generated.css",`,
+    `    native: "src/generated/themes.ts",`,
+    `    tokenNames: "src/generated/tokenNames.ts",`,
+    ...(wiring.outputs.stylex
+      ? [`    stylex: { file: ${JSON.stringify(wiring.outputs.stylex.file)} },`]
+      : []),
+    ...(wiring.outputs.unistyles
+      ? [
+          `    unistyles: { dir: ${JSON.stringify(wiring.outputs.unistyles.dir)} },`,
+        ]
+      : []),
+  ].join("\n");
+
+  // The palette generator guarantees these ratios for every generated theme, so
+  // `tokens check` re-asserts exactly what `generatePalette` promised.
+  const contrastPairs = SCAFFOLD_CONTRAST_PAIRS.map(
+    (pair) =>
+      `    {
+      foreground: "color.${pair.fg}",
+      background: "color.${pair.bg}",
+      minimum: ${pair.minimum},
+      description: ${JSON.stringify(`${pair.fg} on ${pair.bg}`)},
+    },`,
+  ).join("\n");
+
   return `import { defineDesignSystem } from "@assalabs/design-system-tools";
 
 export default defineDesignSystem({
@@ -138,49 +206,24 @@ export default defineDesignSystem({
   themes: ["light", "dark"],
   defaultTheme: "light",
   outputs: {
-    css: "styles/generated.css",
-    native: "src/generated/themes.ts",
-    tokenNames: "src/generated/tokenNames.ts",
+${outputs}
   },
   requiredTokens: [
-    "color.surface.canvas",
-    "color.surface.card",
-    "color.text.primary",
-    "color.text.secondary",
+    "color.bg.canvas",
+    "color.bg.surface",
+    "color.fg.default",
+    "color.fg.muted",
     "color.border.default",
-    "color.action.primary.background",
-    "color.action.primary.foreground",
-    "color.focus.ring",
+    "color.brand.default",
+    "color.brand.primary",
+    "color.fg.onBrand",
     "dimension.space.4",
     "dimension.radius.md",
     "font.family.sans",
     "motion.duration.normal",
   ],
   contrastPairs: [
-    {
-      foreground: "color.text.primary",
-      background: "color.surface.canvas",
-      minimum: 4.5,
-      description: "primary text",
-    },
-    {
-      foreground: "color.text.secondary",
-      background: "color.surface.canvas",
-      minimum: 4.5,
-      description: "secondary text",
-    },
-    {
-      foreground: "color.action.primary.foreground",
-      background: "color.action.primary.background",
-      minimum: 3,
-      description: "primary control",
-    },
-    {
-      foreground: "color.focus.ring",
-      background: "color.surface.canvas",
-      minimum: 3,
-      description: "focus indicator",
-    },
+${contrastPairs}
   ],
 });
 `;
@@ -188,14 +231,29 @@ export default defineDesignSystem({
 
 export async function renderThemePackage(
   options: ScaffoldOptions,
+  palette: PaletteResult,
 ): Promise<Map<string, string>> {
   const toolsVersion = currentToolsVersion();
+  const wiring = resolveThemeWiring(options);
   const files = replacePlaceholders(
     await readTemplateFiles(templateDirectory, templateDirectory),
     options,
   );
-  files.set("package.json", packageJson(options, toolsVersion));
-  files.set("design-system.config.mjs", configFile(options));
+
+  files.set(
+    BASE_TOKENS_FILE,
+    retargetBrandPrimary(
+      files.get(BASE_TOKENS_FILE) ?? "",
+      palette.anchors.brand,
+    ),
+  );
+
+  for (const [filename, contents] of Object.entries(palette.files)) {
+    files.set(`tokens/${filename}`, contents);
+  }
+
+  files.set("package.json", packageJson(options, wiring, toolsVersion));
+  files.set("design-system.config.mjs", configFile(options, wiring));
   files.set(
     "src/index.ts",
     'export { tokenNames, type TokenName } from "./generated/tokenNames";\nexport { darkTheme, lightTheme, themes, type Theme, type ThemeName } from "./generated/themes";\n',
@@ -204,13 +262,6 @@ export async function renderThemePackage(
     "src/native.ts",
     'export { darkTheme, lightTheme, themes, type Theme, type ThemeName } from "./generated/themes";\n',
   );
-
-  if (options.web === "stylex") {
-    files.set(
-      "src/generated/tokens.stylex.ts",
-      `import * as stylex from "@stylexjs/stylex";\n\n// Typed StyleX references to the generated DTCG custom properties.\nexport const tokens = stylex.defineVars({\n  colorActionPrimaryBackground: "var(--${options.prefix}-color-action-primary-background)",\n  colorActionPrimaryForeground: "var(--${options.prefix}-color-action-primary-foreground)",\n  colorActionPrimaryPressed: "var(--${options.prefix}-color-action-primary-pressed)",\n  colorBorderDefault: "var(--${options.prefix}-color-border-default)",\n  colorFeedbackErrorForeground: "var(--${options.prefix}-color-feedback-error-foreground)",\n  colorFocusRing: "var(--${options.prefix}-color-focus-ring)",\n  colorSurfaceCanvas: "var(--${options.prefix}-color-surface-canvas)",\n  colorSurfaceCard: "var(--${options.prefix}-color-surface-card)",\n  colorTextPrimary: "var(--${options.prefix}-color-text-primary)",\n  colorTextSecondary: "var(--${options.prefix}-color-text-secondary)",\n  dimensionRadiusMd: "var(--${options.prefix}-dimension-radius-md)",\n  dimensionRadiusPill: "var(--${options.prefix}-dimension-radius-pill)",\n  dimensionSpace1: "var(--${options.prefix}-dimension-space-1)",\n  dimensionSpace2: "var(--${options.prefix}-dimension-space-2)",\n  dimensionSpace3: "var(--${options.prefix}-dimension-space-3)",\n  dimensionSpace4: "var(--${options.prefix}-dimension-space-4)",\n  dimensionSpace6: "var(--${options.prefix}-dimension-space-6)",\n  fontFamilySans: "var(--${options.prefix}-font-family-sans)",\n  fontSizeMd: "var(--${options.prefix}-font-size-md)",\n  fontSizeSm: "var(--${options.prefix}-font-size-sm)",\n  fontWeightSemibold: "var(--${options.prefix}-font-weight-semibold)",\n  motionDurationFast: "var(--${options.prefix}-motion-duration-fast)",\n});\n`,
-    );
-  }
 
   return files;
 }

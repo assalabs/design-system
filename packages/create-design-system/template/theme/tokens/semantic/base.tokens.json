@@ -2,7 +2,7 @@
   "color": {
     "brand": {
       "$type": "color",
-      "primary": { "$value": "{color.primitive.blue.600}" }
+      "primary": { "$value": "{color.primitive.brand.ANCHOR}" }
     }
   }
 }
