@@ -1,10 +1,35 @@
 import { existsSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import {
+  dirname,
+  isAbsolute,
+  normalize,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 import { pathToFileURL } from "node:url";
 import { assertNativeThemeNames } from "./nativePlugin.js";
 import type { DesignSystemConfig, LoadedDesignSystemConfig } from "./types.js";
 
 export const DEFAULT_CONFIG_FILENAME = "design-system.config.mjs";
+
+// Same containment rule as assertOutputPath in build.ts, reported at config time
+// so adapter paths fail on load instead of on the first write.
+function assertContainedOutput(label: string, value: string): void {
+  if (!value.trim()) {
+    throw new Error(`Output ${label} cannot be empty.`);
+  }
+
+  const normalized = normalize(value);
+
+  if (
+    isAbsolute(value) ||
+    normalized === ".." ||
+    normalized.startsWith(`..${sep}`)
+  ) {
+    throw new Error(`Output path must stay inside the theme package: ${value}`);
+  }
+}
 
 export function defineDesignSystem(
   config: DesignSystemConfig,
@@ -35,6 +60,32 @@ export function defineDesignSystem(
 
   if (!config.outputs.css && !config.outputs.native) {
     throw new Error("At least one CSS or native output is required.");
+  }
+
+  if (config.outputs.stylex) {
+    assertContainedOutput("stylex.file", config.outputs.stylex.file);
+  }
+
+  if (config.outputs.unistyles) {
+    const { dir } = config.outputs.unistyles;
+    assertContainedOutput("unistyles.dir", dir);
+
+    if (!config.outputs.native) {
+      throw new Error(
+        "outputs.unistyles requires outputs.native because the generated Unistyles module imports the native themes file.",
+      );
+    }
+
+    const themesDirectory = relative(
+      resolve(sep, dir),
+      resolve(sep, dirname(config.outputs.native)),
+    );
+
+    if (themesDirectory.startsWith("..") || isAbsolute(themesDirectory)) {
+      throw new Error(
+        `outputs.unistyles.dir "${dir}" must contain outputs.native "${config.outputs.native}" so the generated Unistyles module can import the themes file.`,
+      );
+    }
   }
 
   return Object.freeze({ ...config });

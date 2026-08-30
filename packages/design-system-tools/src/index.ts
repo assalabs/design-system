@@ -19,6 +19,8 @@ export type {
   DesignSystemConfig,
   GeneratedOutput,
   LoadedDesignSystemConfig,
+  StylexOutput,
+  UnistylesOutput,
 } from "./types.js";
 export { buildRamp, STEPS } from "./palette/ladder.js";
 export type { Ramp, Step, BuildRampResult } from "./palette/ladder.js";
