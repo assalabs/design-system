@@ -126,8 +126,13 @@ function renderBreakpoints(breakpoints: readonly Breakpoint[]): string {
 }
 
 /**
- * Emits `<dir>/unistyles.ts` (themes, breakpoints and `configureUnistyles()`)
- * plus `<dir>/unistyles.d.ts` (the `react-native-unistyles` module augmentation).
+ * Emits a single `<dir>/unistyles.ts` with themes, breakpoints,
+ * `configureUnistyles()` and the `react-native-unistyles` module augmentation.
+ *
+ * The augmentation is inlined rather than emitted as a sibling
+ * `unistyles.d.ts`: TypeScript drops a declaration file shadowed by a
+ * same-named `.ts` from wildcard-include programs, and module resolution
+ * prefers the `.ts`, so a sibling declaration would never load.
  */
 export function emitUnistyles(
   config: DesignSystemConfig,
@@ -181,7 +186,8 @@ export function emitUnistyles(
   const specifier = themesSpecifier(output.dir, config.outputs.native);
   const directory = toPosixPath(output.dir);
 
-  const module = `${HEADER}import { StyleSheet } from "react-native-unistyles";
+  const module = `${HEADER}/* eslint-disable @typescript-eslint/no-empty-object-type */
+import { StyleSheet } from "react-native-unistyles";
 import { darkTheme, lightTheme } from ${JSON.stringify(specifier)};
 
 const spacingBase = ${spacingBase}; // ${spacingBaseToken} (px), default ${DEFAULT_SPACING_BASE} when token absent
@@ -202,24 +208,17 @@ export const themes = {
 export type AppThemes = typeof themes;
 export type AppBreakpoints = typeof breakpoints;
 
+declare module "react-native-unistyles" {
+  export interface UnistylesThemes extends AppThemes {}
+  export interface UnistylesBreakpoints extends AppBreakpoints {}
+}
+
 export function configureUnistyles() {
   StyleSheet.configure({ themes, breakpoints, settings: { adaptiveThemes: true } });
 }
 `;
 
-  const declaration = `${HEADER}import type { AppBreakpoints, AppThemes } from "./unistyles";
-
-declare module "react-native-unistyles" {
-  export interface UnistylesThemes extends AppThemes {}
-  export interface UnistylesBreakpoints extends AppBreakpoints {}
-}
-`;
-
   return [
     { filename: posix.join(directory, "unistyles.ts"), contents: module },
-    {
-      filename: posix.join(directory, "unistyles.d.ts"),
-      contents: declaration,
-    },
   ];
 }
