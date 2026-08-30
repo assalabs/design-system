@@ -3,7 +3,15 @@
 import { cancel, intro, isCancel, outro, select, text } from "@clack/prompts";
 import { basename, resolve } from "node:path";
 import { scaffoldDesignSystem } from "./scaffold.js";
-import type { NativeAdapter, ScaffoldOptions, WebAdapter } from "./types.js";
+import type {
+  Bundler,
+  NativeAdapter,
+  ScaffoldOptions,
+  Template,
+  WebAdapter,
+} from "./types.js";
+
+const HEX_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 function valueAfter(args: string[], flag: string): string | undefined {
   const inline = args.find((argument) => argument.startsWith(`${flag}=`));
@@ -43,6 +51,20 @@ function defaultPrefix(value: string): string {
   ).slice(0, 4);
 }
 
+function assertHex(flag: string, value: string): string {
+  if (!HEX_PATTERN.test(value)) {
+    throw new Error(`${flag} must be #RRGGBB (got "${value}")`);
+  }
+  return value;
+}
+
+function assertNeutral(value: string): string {
+  if (value === "gray") {
+    return value;
+  }
+  return assertHex("--neutral", value);
+}
+
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) {
     cancel("Design-system setup cancelled.");
@@ -57,16 +79,21 @@ function printHelp(): void {
 Usage:
   create-assalabs-design-system init
   create-assalabs-design-system init --name Acme --scope @acme --prefix ac \\
-    --web stylex --native unistyles
+    --template expo --brand "#FF3131" --yes
 
 Options:
-  --cwd path       Target monorepo (default: current directory)
-  --name name      Design-system display name
-  --scope scope    Package scope, such as @acme
-  --prefix prefix  CSS custom-property prefix
-  --web adapter    stylex, css-modules, or none
-  --native adapter unistyles or none
-  --yes            Accept inferred names and recommended adapters
+  --cwd path        Target monorepo (default: current directory)
+  --name name       Design-system display name
+  --scope scope     Package scope, such as @acme
+  --prefix prefix   CSS custom-property prefix
+  --template name   expo, web, or none (default: none)
+  --bundler name    rsbuild or vite (default: rsbuild; --template web only)
+  --brand hex       Brand seed colour, such as #FF3131
+  --neutral value   Neutral seed hex or "gray" (default: derived from brand hue)
+  --accent hex      Accent seed hex (default: brand hue rotated by 150 degrees)
+  --web adapter     stylex, css-modules, or none
+  --native adapter  unistyles or none
+  --yes             Accept inferred names and adapters; requires --brand
 `);
 }
 
@@ -78,6 +105,8 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
     name: displayName(directoryName) || "Design System",
     scope: `@${inferredSlug}`,
     prefix: defaultPrefix(directoryName),
+    template: "none" as const,
+    bundler: "rsbuild" as const,
     web: "stylex" as const,
     native: "unistyles" as const,
   };
@@ -85,16 +114,32 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
     name: valueAfter(args, "--name"),
     scope: valueAfter(args, "--scope"),
     prefix: valueAfter(args, "--prefix"),
+    template: valueAfter(args, "--template") as Template | undefined,
+    bundler: valueAfter(args, "--bundler") as Bundler | undefined,
+    brand: valueAfter(args, "--brand"),
+    neutral: valueAfter(args, "--neutral"),
+    accent: valueAfter(args, "--accent"),
     web: valueAfter(args, "--web") as WebAdapter | undefined,
     native: valueAfter(args, "--native") as NativeAdapter | undefined,
   };
+  const bundler = supplied.bundler ?? defaults.bundler;
 
   if (hasFlag(args, "--yes")) {
+    if (!supplied.brand) {
+      throw new Error("--brand is required with --yes");
+    }
     return {
       cwd,
       name: supplied.name ?? defaults.name,
       scope: supplied.scope ?? defaults.scope,
       prefix: supplied.prefix ?? defaults.prefix,
+      template: supplied.template ?? defaults.template,
+      bundler,
+      brand: assertHex("--brand", supplied.brand),
+      neutral: supplied.neutral ? assertNeutral(supplied.neutral) : undefined,
+      accent: supplied.accent
+        ? assertHex("--accent", supplied.accent)
+        : undefined,
       web: supplied.web ?? defaults.web,
       native: supplied.native ?? defaults.native,
     };
@@ -129,6 +174,57 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
         placeholder: defaultPrefix(projectSlug),
       }),
     );
+  const template =
+    supplied.template ??
+    unwrap(
+      await select<Template>({
+        message: "App template",
+        initialValue: defaults.template,
+        options: [
+          { value: "none", label: "None", hint: "theme package only" },
+          { value: "expo", label: "Expo app" },
+          { value: "web", label: "Web app" },
+        ],
+      }),
+    );
+  const brand = supplied.brand
+    ? assertHex("--brand", supplied.brand)
+    : unwrap(
+        await text({
+          message: "Brand seed colour",
+          placeholder: "#FF3131",
+          validate: (value) =>
+            HEX_PATTERN.test(value ?? "")
+              ? undefined
+              : "Enter a hex colour such as #FF3131.",
+        }),
+      );
+  const neutralAnswer =
+    supplied.neutral ??
+    unwrap(
+      await text({
+        message: 'Neutral seed (hex or "gray", blank to derive from brand)',
+        defaultValue: "",
+        placeholder: "derived from brand hue",
+        validate: (value) =>
+          !value || value === "gray" || HEX_PATTERN.test(value)
+            ? undefined
+            : 'Enter a hex colour, "gray", or leave blank.',
+      }),
+    );
+  const accentAnswer =
+    supplied.accent ??
+    unwrap(
+      await text({
+        message: "Accent seed (hex, blank to derive from brand)",
+        defaultValue: "",
+        placeholder: "derived from brand hue",
+        validate: (value) =>
+          !value || HEX_PATTERN.test(value)
+            ? undefined
+            : "Enter a hex colour such as #31FFB0.",
+      }),
+    );
   const web =
     supplied.web ??
     unwrap(
@@ -155,7 +251,19 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
       }),
     );
 
-  return { cwd, name, scope, prefix, web, native };
+  return {
+    cwd,
+    name,
+    scope,
+    prefix,
+    template,
+    bundler,
+    brand,
+    neutral: neutralAnswer ? assertNeutral(neutralAnswer) : undefined,
+    accent: accentAnswer ? assertHex("--accent", accentAnswer) : undefined,
+    web,
+    native,
+  };
 }
 
 async function main(): Promise<void> {
@@ -165,6 +273,11 @@ async function main(): Promise<void> {
     if (args[0] && !["--help", "-h"].includes(args[0])) {
       process.exitCode = 1;
     }
+    return;
+  }
+
+  if (hasFlag(args, "--help") || hasFlag(args, "-h")) {
+    printHelp();
     return;
   }
 

@@ -74,7 +74,25 @@ try {
     join(temporaryRoot, "package.json"),
     `${JSON.stringify({ private: true }, null, 2)}\n`,
   );
-  run("npm", ["install", "--ignore-scripts", createArchive], temporaryRoot);
+
+  // `npm pack` keeps `workspace:*` verbatim, so install the initializer from an
+  // extracted copy whose tools dependency points at the packed tools tarball.
+  const extractedRoot = join(temporaryRoot, "initializer");
+  await mkdir(extractedRoot, { recursive: true });
+  run("tar", ["-xf", createArchive, "-C", extractedRoot]);
+  const createPackagePath = join(extractedRoot, "package/package.json");
+  const createPackage = JSON.parse(await readFile(createPackagePath, "utf8"));
+  createPackage.dependencies["@assalabs/design-system-tools"] =
+    `file:${toolsArchive}`;
+  await writeFile(
+    createPackagePath,
+    `${JSON.stringify(createPackage, null, 2)}\n`,
+  );
+  run(
+    "npm",
+    ["install", "--ignore-scripts", join(extractedRoot, "package")],
+    temporaryRoot,
+  );
 
   const fixtureRoot = join(temporaryRoot, "fixture");
   run(
@@ -93,10 +111,15 @@ try {
       "fx",
       "--cwd",
       fixtureRoot,
+      "--template",
+      "none",
+      "--brand",
+      "#FF3131",
       "--web",
       "stylex",
       "--native",
       "unistyles",
+      "--yes",
     ],
     temporaryRoot,
   );
@@ -234,10 +257,15 @@ try {
       "cf",
       "--cwd",
       cssFixtureRoot,
+      "--template",
+      "none",
+      "--brand",
+      "#FF3131",
       "--web",
       "css-modules",
       "--native",
       "none",
+      "--yes",
     ],
     temporaryRoot,
   );

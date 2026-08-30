@@ -118,6 +118,9 @@ importers:
 
   packages/create-design-system:
     dependencies:
+      '@assalabs/design-system-tools':
+        specifier: workspace:*
+        version: link:../design-system-tools
       '@clack/prompts':
         specifier: ^1.7.0
         version: 1.7.0
