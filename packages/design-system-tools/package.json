@@ -30,11 +30,13 @@
   "dependencies": {
     "@terrazzo/parser": "2.5.0",
     "@terrazzo/plugin-css": "2.5.0",
-    "chokidar": "5.0.0"
+    "chokidar": "5.0.0",
+    "culori": "^4.0.2"
   },
   "devDependencies": {
     "@assalabs/eslint-config": "^0.1.1",
     "@tsconfig/recommended": "^1.0.8",
+    "@types/culori": "^4.0.1",
     "@types/node": "^24.10.1",
     "eslint": "^9.39.2",
     "tsup": "^8.5.1",
