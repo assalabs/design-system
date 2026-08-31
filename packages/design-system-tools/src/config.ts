@@ -89,7 +89,7 @@ export function defineDesignSystem(
 
     if (themesDirectory.startsWith("..") || isAbsolute(themesDirectory)) {
       throw new Error(
-        `outputs.unistyles.dir "${dir}" must contain outputs.native "${config.outputs.native}" so the generated Unistyles module can import the themes file.`,
+        `outputs.unistyles.dir must contain the outputs.native directory so the generated Unistyles module can import the themes file (dir "${dir}", native "${config.outputs.native}").`,
       );
     }
   }
