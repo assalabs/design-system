@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "{{DESIGN_SYSTEM_NAME}}",
+    "slug": "{{APP_NAME}}",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true
+    }
+  }
+}

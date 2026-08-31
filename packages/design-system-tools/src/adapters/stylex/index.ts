@@ -5,6 +5,7 @@ import {
   assertLightDark,
   assertUniqueKey,
   camelKey,
+  declaredCssVariable,
   groupFor,
   HEADER,
   propertyKey,
@@ -12,10 +13,6 @@ import {
 } from "../shared.js";
 
 const ADAPTER = "stylex";
-
-const CONSTANTS = `const DARK = ${JSON.stringify("@media (prefers-color-scheme: dark)")};
-const FORCE_DARK = ${JSON.stringify(':root[data-theme="dark"]')};
-const FORCE_LIGHT = ${JSON.stringify(':root[data-theme="light"]')};`;
 
 const CSS_IDENTIFIER = /^[A-Za-z][A-Za-z0-9-]*$/;
 
@@ -64,28 +61,31 @@ function toStylexValue(token: TokenNormalized): string {
 
 type Variable = {
   key: string;
-  light: string;
-  dark: string;
-  themed: boolean;
+  value: string;
 };
 
 function renderVariable(variable: Variable): string {
-  const key = propertyKey(variable.key);
-
-  if (!variable.themed) {
-    return `  ${key}: ${JSON.stringify(variable.light)},`;
-  }
-
-  const light = JSON.stringify(variable.light);
-  const dark = JSON.stringify(variable.dark);
-
-  return `  ${key}: { default: ${light}, [DARK]: ${dark}, [FORCE_DARK]: ${dark}, [FORCE_LIGHT]: ${light} },`;
+  return `  ${propertyKey(variable.key)}: ${JSON.stringify(variable.value)},`;
 }
 
 /**
- * Emits one flat `stylex.defineVars` per token group. Colors always carry the
- * 4-key theme override object; other groups stay plain strings unless the two
- * themes disagree.
+ * Emits one flat `stylex.defineVars` per token group.
+ *
+ * Theme-dependent tokens (every color, plus anything else whose light and dark
+ * values disagree) are emitted as a `var()` reference to the custom property
+ * `outputs.css` already declares, rather than as a literal. Everything else —
+ * spacing, radius, fonts, motion — stays a literal, since it is the same in
+ * both themes.
+ *
+ * `stylex.defineVars` cannot express the override itself: StyleX 0.19 treats
+ * every non-`default` key of a value object as an at-rule, so a selector key
+ * such as `:root[data-theme="dark"]` is emitted as a nested rule with no `&`
+ * and lowers to a dead *descendant* selector (`[data-theme=dark] :root`), which
+ * can never match because `:root` is the same element. Aliasing the stylesheet
+ * instead lets its flat `:root` / `[data-theme]` / `prefers-color-scheme`
+ * blocks drive all three states: the StyleX variable is declared once on
+ * `:root`, and its substituted value is recomputed whenever the theme changes
+ * on that same element.
  */
 export function emitStylex(
   config: DesignSystemConfig,
@@ -111,7 +111,6 @@ export function emitStylex(
   const ids = [
     ...new Set([...Object.keys(light), ...Object.keys(dark)]),
   ].sort();
-  let themed = false;
 
   for (const id of ids) {
     const route = groupFor(id.split("."));
@@ -139,13 +138,13 @@ export function emitStylex(
 
     assertUniqueKey(taken, route.group, key, id);
 
+    const themed = isColor || lightValue !== darkValue;
     const variable: Variable = {
       key,
-      light: lightValue,
-      dark: darkValue,
-      themed: isColor || lightValue !== darkValue,
+      value: themed
+        ? `var(${declaredCssVariable(config.prefix, id)})`
+        : lightValue,
     };
-    themed ||= variable.themed;
 
     const existing = groups.get(route.group);
 
@@ -167,7 +166,6 @@ export function emitStylex(
   const sections = [
     HEADER.trimEnd(),
     'import * as stylex from "@stylexjs/stylex";',
-    ...(themed ? [CONSTANTS] : []),
     ...blocks,
   ];
 

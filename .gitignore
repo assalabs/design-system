@@ -14,5 +14,9 @@ coverage/
 *.log
 pnpm-debug.log*
 
+# `verify-template.mjs` regenerates examples/<template> on every run.
+examples/*
+!examples/theme
+
 examples/theme/src/generated/
 examples/theme/styles/generated.css

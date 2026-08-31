@@ -1,0 +1,17 @@
+/*
+ * The generated stylesheet carries the same tokens as `tokens.stylex.ts` under
+ * `--{{prefix}}-*` custom properties, with `:root`, `[data-theme]` and
+ * `prefers-color-scheme` blocks. Import it once so plain CSS can use tokens too.
+ */
+@import "{{scope}}/theme/css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--{{prefix}}-font-family-sans);
+}

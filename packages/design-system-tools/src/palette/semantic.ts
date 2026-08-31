@@ -195,10 +195,10 @@ export function selectRoles(
     }
     if (!ok) {
       const detail = best
-        ? `${best.pair.fg}/${best.pair.bg} >= ${best.pair.minimum} (best ${best.ratio.toFixed(2)})`
+        ? `${best.pair.fg}/${best.pair.bg} \u2265 ${best.pair.minimum} (best ${best.ratio.toFixed(2)})`
         : "its contrast pairs (empty candidate list)";
       throw new PaletteError(
-        `${theme}: no candidate for ${role} satisfies ${detail}`,
+        `${theme}: no candidate for color.${role} satisfies ${detail}`,
       );
     }
   }
@@ -232,7 +232,7 @@ export function selectRoles(
   }
   if (brandStep === undefined) {
     throw new PaletteError(
-      `${theme}: no brand step satisfies fg.onBrand/brand.default >= 4.5 (best ${bestRatio.toFixed(2)} at brand.${bestStep})`,
+      `${theme}: no candidate for color.brand.default satisfies fg.onBrand/brand.default \u2265 4.5 (best ${bestRatio.toFixed(2)} at brand.${bestStep})`,
     );
   }
   const direction = light ? 1 : -1;

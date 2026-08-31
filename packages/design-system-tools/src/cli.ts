@@ -19,9 +19,39 @@ const PALETTE_FILENAMES = [
   "semantic/dark.tokens.json",
 ] as const;
 
+const DEBUG_FLAG = "--debug";
+
 function readFlag(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
   return index === -1 ? undefined : args[index + 1];
+}
+
+/**
+ * Writes one failure to stderr.
+ *
+ * The default is a single line, because the errors this tool raises itself are
+ * already written for a human. Errors it only PROPAGATES are not: the config is
+ * imported as real ESM, so a `TypeError` inside it reaches the user as a bare
+ * "Cannot read properties of undefined". `--debug` prints the stack (and the
+ * `cause` chain, which carries the original error when a message was
+ * re-wrapped) so those stay diagnosable without noisying up the curated ones.
+ */
+function reportError(error: unknown): void {
+  if (!(error instanceof Error)) {
+    console.error(error);
+    return;
+  }
+
+  if (!process.argv.includes(DEBUG_FLAG)) {
+    console.error(error.message);
+    return;
+  }
+
+  console.error(error.stack ?? error.message);
+
+  for (let cause = error.cause; cause instanceof Error; cause = cause.cause) {
+    console.error(`Caused by: ${cause.stack ?? cause.message}`);
+  }
 }
 
 function printHelp(): void {
@@ -32,6 +62,10 @@ Usage:
   assalabs-ds tokens check [--config path]
   assalabs-ds tokens watch [--config path]
   assalabs-ds palette --brand "<#RRGGBB>" [options]
+
+Options:
+  --config <path>   Config path (default design-system.config.mjs).
+  --debug           Print the stack trace instead of only the message.
 
 Palette derivation: neutral keeps the brand hue at low chroma, accent uses the
 brand hue rotated by 150 degrees, and status ramps use fixed hues.
@@ -56,6 +90,7 @@ Options:
   --force                       Overwrite existing token files.
   --json                        Print the palette to stdout and write nothing.
   --config   <path>             Config path (default design-system.config.mjs).
+  --debug                       Print the stack trace instead of only the message.
 
 Quote seed colors: an unquoted # starts a comment in POSIX shells, so
 --brand #FF3131 arrives with no value at all.
@@ -155,7 +190,7 @@ async function watch(configArgument?: string): Promise<void> {
 
       await buildLoaded(loaded);
     } catch (error) {
-      console.error(error instanceof Error ? error.message : error);
+      reportError(error);
     } finally {
       rebuilding = false;
       if (queued) {
@@ -250,14 +285,19 @@ async function palette(args: string[], configArgument?: string): Promise<void> {
   const outputs = paletteOutputs(loaded, result.files);
 
   if (!args.includes("--force")) {
-    for (const output of outputs) {
-      const destination = resolve(loaded.rootDirectory, output.filename);
+    // Report every file that would be clobbered, not just the first one, so a
+    // single run tells the user the full cost of adding --force.
+    const existing = outputs
+      .map((output) => resolve(loaded.rootDirectory, output.filename))
+      .filter((destination) => existsSync(destination))
+      .map(
+        (destination) => relative(process.cwd(), destination) || destination,
+      );
 
-      if (existsSync(destination)) {
-        throw new Error(
-          `Refusing to overwrite ${relative(process.cwd(), destination) || destination} (use --force)`,
-        );
-      }
+    if (existing.length > 0) {
+      throw new PaletteError(
+        `Refusing to overwrite ${existing.join(", ")} (use --force)`,
+      );
     }
   }
 
@@ -270,7 +310,9 @@ async function main(): Promise<void> {
   const configArgument = readFlag(args, "--config");
   const [command, subcommand] = args.filter(
     (argument, index) =>
-      argument !== "--config" && args[index - 1] !== "--config",
+      argument !== "--config" &&
+      argument !== DEBUG_FLAG &&
+      args[index - 1] !== "--config",
   );
 
   if (command === "tokens" && subcommand === "build") {
@@ -299,7 +341,12 @@ async function main(): Promise<void> {
   }
 }
 
+// Every failure exits 1 through here. Without --debug it is one stderr line:
+// that is the finished contract for the errors this tool writes itself
+// (PaletteError, config validation, stale outputs), and a lossy summary for the
+// ones it merely propagates from user-authored config code. --debug prints the
+// stack instead; see reportError.
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : error);
+  reportError(error);
   process.exitCode = 1;
 });

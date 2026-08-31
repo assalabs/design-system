@@ -43,6 +43,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@assalabs/design-system-tools": "workspace:*",
     "@clack/prompts": "^1.7.0"
   },
   "repository": {

@@ -1,6 +1,8 @@
 import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
+import { generatePalette } from "@assalabs/design-system-tools";
 import {
+  renderAppTemplate,
   renderNativePackage,
   renderThemePackage,
   renderWebPackage,
@@ -22,6 +24,18 @@ function validateOptions(options: ScaffoldOptions): void {
     );
   }
 
+  if (!options.brand) {
+    throw new Error("--brand is required.");
+  }
+
+  if (options.template && !["expo", "web", "none"].includes(options.template)) {
+    throw new Error("--template must be expo, web, or none.");
+  }
+
+  if (options.bundler && !["rsbuild", "vite"].includes(options.bundler)) {
+    throw new Error("--bundler must be rsbuild or vite.");
+  }
+
   if (options.web && !["stylex", "css-modules", "none"].includes(options.web)) {
     throw new Error("--web must be stylex, css-modules, or none.");
   }
@@ -31,14 +45,39 @@ function validateOptions(options: ScaffoldOptions): void {
   }
 }
 
+// A file here is not a monorepo marker -- a fresh `git init` + `README.md` is
+// one of the most common starting states -- so keep the user's copy and skip
+// ours instead of refusing to scaffold at all.
+const SKIPPABLE_TEMPLATE_FILES = new Set(["README.md"]);
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export async function scaffoldDesignSystem(
   options: ScaffoldOptions,
 ): Promise<ScaffoldResult> {
   validateOptions(options);
+
+  // Throws PaletteError on an unusable seed, before anything is written.
+  const palette = generatePalette({
+    brand: options.brand,
+    neutral: options.neutral,
+    accent: options.accent,
+  });
+
   const packages = [
     {
       path: "packages/theme",
-      files: await renderThemePackage(options),
+      files: await renderThemePackage(options, palette),
     },
     {
       path: "packages/ui-web",
@@ -53,21 +92,41 @@ export async function scaffoldDesignSystem(
       entry.files !== undefined,
   );
 
+  // App templates own the workspace root, so any file already sitting where the
+  // template writes means this is somebody else's monorepo -- except the files
+  // in SKIPPABLE_TEMPLATE_FILES, which say nothing about the directory.
+  const appTemplate = await renderAppTemplate(options);
+  const appFilenames = appTemplate ? [...appTemplate.keys()].sort() : [];
+  const skippedFilenames: string[] = [];
+  const writableFilenames: string[] = [];
+  for (const filename of appFilenames) {
+    const destination = resolve(options.cwd, filename);
+    if (!(await exists(destination))) {
+      writableFilenames.push(filename);
+      continue;
+    }
+
+    if (SKIPPABLE_TEMPLATE_FILES.has(filename)) {
+      skippedFilenames.push(filename);
+      continue;
+    }
+
+    throw new Error(
+      `Refusing to overwrite existing file: ${destination}. Use --template none inside an existing monorepo.`,
+    );
+  }
+
   for (const entry of packages) {
     const targetDirectory = resolve(options.cwd, entry.path);
-    try {
-      await access(targetDirectory);
+    if (await exists(targetDirectory)) {
       throw new Error(
         `Refusing to overwrite existing directory: ${targetDirectory}`,
       );
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw error;
-      }
     }
   }
 
   const createdDirectories: string[] = [];
+  const createdFiles: string[] = [];
   try {
     for (const entry of packages) {
       const targetDirectory = resolve(options.cwd, entry.path);
@@ -87,15 +146,24 @@ export async function scaffoldDesignSystem(
       }
     }
 
+    for (const filename of writableFilenames) {
+      const destination = resolve(options.cwd, filename);
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, appTemplate?.get(filename) ?? "", "utf8");
+      createdFiles.push(destination);
+      filenames.push(relative(options.cwd, destination));
+    }
+
     return {
       directory: resolve(options.cwd, "packages/theme"),
       directories: packages.map((entry) => resolve(options.cwd, entry.path)),
       files: filenames.sort(),
+      skipped: skippedFilenames,
     };
   } catch (error) {
     await Promise.all(
-      createdDirectories.map((directory) =>
-        rm(directory, { recursive: true, force: true }),
+      [...createdDirectories, ...createdFiles].map((path) =>
+        rm(path, { recursive: true, force: true }),
       ),
     );
     throw error;

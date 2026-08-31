@@ -3,6 +3,9 @@
   "include": ["src"],
   "compilerOptions": {
     "ignoreDeprecations": "6.0",
+    // Matches the tsup `--target node22` this package actually builds with, so
+    // ES2022 runtime APIs (`Error.cause`) typecheck as the shipped code uses them.
+    "target": "ES2022",
     "types": ["node"]
   }
 }

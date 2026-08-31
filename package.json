@@ -14,6 +14,8 @@
     "release": "pnpm build && changeset publish",
     "test": "turbo test",
     "test:pack": "node scripts/verify-design-system-pack.mjs",
+    "test:consumer-parity": "node scripts/verify-consumer-parity.mjs",
+    "test:template": "node scripts/verify-template.mjs",
     "typecheck": "turbo typecheck",
     "version-packages": "changeset version"
   },
