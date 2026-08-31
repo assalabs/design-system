@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@assalabs/design-system-example-theme": "workspace:*",
-    "expo": "~55.0.0",
+    "expo": "~57.0.18",
     "react": "19.2.3",
     "react-native": "0.83.0"
   },
