@@ -1,0 +1,26 @@
+{
+  "name": "{{scope}}/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "android": "expo start --android",
+    "dev": "expo start",
+    "ios": "expo start --ios",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "{{scope}}/theme": "workspace:*",
+    "expo": "56.0.21",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-nitro-modules": "0.36.1",
+    "react-native-unistyles": "3.3.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.2.0",
+    "babel-preset-expo": "~56.0.20",
+    "typescript": "^6.0.0"
+  }
+}

@@ -2,6 +2,7 @@ import { access, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve } from "node:path";
 import { generatePalette } from "@assalabs/design-system-tools";
 import {
+  renderAppTemplate,
   renderNativePackage,
   renderThemePackage,
   renderWebPackage,
@@ -86,13 +87,15 @@ export async function scaffoldDesignSystem(
       entry.files !== undefined,
   );
 
-  // App templates own the workspace root, so an existing root manifest means
-  // this is somebody else's monorepo and the template would fight it.
-  if (options.template && options.template !== "none") {
-    const rootManifest = resolve(options.cwd, "package.json");
-    if (await exists(rootManifest)) {
+  // App templates own the workspace root, so any file already sitting where the
+  // template writes means this is somebody else's monorepo.
+  const appTemplate = await renderAppTemplate(options);
+  const appFilenames = appTemplate ? [...appTemplate.keys()].sort() : [];
+  for (const filename of appFilenames) {
+    const destination = resolve(options.cwd, filename);
+    if (await exists(destination)) {
       throw new Error(
-        `Refusing to overwrite existing file: ${rootManifest}. Use --template none inside an existing monorepo.`,
+        `Refusing to overwrite existing file: ${destination}. Use --template none inside an existing monorepo.`,
       );
     }
   }
@@ -107,6 +110,7 @@ export async function scaffoldDesignSystem(
   }
 
   const createdDirectories: string[] = [];
+  const createdFiles: string[] = [];
   try {
     for (const entry of packages) {
       const targetDirectory = resolve(options.cwd, entry.path);
@@ -126,6 +130,14 @@ export async function scaffoldDesignSystem(
       }
     }
 
+    for (const filename of appFilenames) {
+      const destination = resolve(options.cwd, filename);
+      await mkdir(dirname(destination), { recursive: true });
+      await writeFile(destination, appTemplate?.get(filename) ?? "", "utf8");
+      createdFiles.push(destination);
+      filenames.push(relative(options.cwd, destination));
+    }
+
     return {
       directory: resolve(options.cwd, "packages/theme"),
       directories: packages.map((entry) => resolve(options.cwd, entry.path)),
@@ -133,8 +145,8 @@ export async function scaffoldDesignSystem(
     };
   } catch (error) {
     await Promise.all(
-      createdDirectories.map((directory) =>
-        rm(directory, { recursive: true, force: true }),
+      [...createdDirectories, ...createdFiles].map((path) =>
+        rm(path, { recursive: true, force: true }),
       ),
     );
     throw error;

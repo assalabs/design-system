@@ -22,6 +22,15 @@ const BRAND_ANCHOR_PLACEHOLDER = "{color.primitive.brand.ANCHOR}";
 
 const BASE_TOKENS_FILE = "tokens/semantic/base.tokens.json";
 
+/**
+ * `npm pack` always strips `.gitignore` and `.npmrc`, so the app templates ship
+ * them dot-less and the scaffold restores the real name on write.
+ */
+const TEMPLATE_FILENAME_ALIASES = new Map([
+  ["gitignore", ".gitignore"],
+  ["npmrc", ".npmrc"],
+]);
+
 function currentToolsVersion(): string {
   if (typeof toolsPackage.version !== "string" || !toolsPackage.version) {
     throw new Error("Could not resolve the design-system-tools version.");
@@ -90,7 +99,7 @@ function replacePlaceholders(
   );
 }
 
-async function renderAdapterPackage(
+async function renderTemplateDirectory(
   relativeDirectory: string,
   options: ScaffoldOptions,
 ): Promise<Map<string, string>> {
@@ -266,20 +275,70 @@ export async function renderThemePackage(
   return files;
 }
 
+/**
+ * The `ui-web` / `ui-native` component packages belong to `--template none`
+ * only: an app template already ships its own styling wiring, and
+ * `resolveThemeWiring` picks the adapter from the template rather than from
+ * `--web` / `--native`, so a ui package chosen alongside a template could ask
+ * for an adapter output the theme never emits.
+ */
+function uiPackagesRequested(options: ScaffoldOptions): boolean {
+  return (options.template ?? "none") === "none";
+}
+
 export async function renderWebPackage(
   options: ScaffoldOptions,
 ): Promise<Map<string, string> | undefined> {
-  if (!options.web || options.web === "none") {
+  if (!uiPackagesRequested(options) || !options.web || options.web === "none") {
     return undefined;
   }
-  return renderAdapterPackage(`ui-web/${options.web}`, options);
+  return renderTemplateDirectory(`ui-web/${options.web}`, options);
 }
 
 export async function renderNativePackage(
   options: ScaffoldOptions,
 ): Promise<Map<string, string> | undefined> {
-  if (!options.native || options.native === "none") {
+  if (
+    !uiPackagesRequested(options) ||
+    !options.native ||
+    options.native === "none"
+  ) {
     return undefined;
   }
-  return renderAdapterPackage(`ui-native/${options.native}`, options);
+  return renderTemplateDirectory(`ui-native/${options.native}`, options);
+}
+
+function appTemplateDirectory(options: ScaffoldOptions): string | undefined {
+  switch (options.template) {
+    case "expo":
+      return "expo";
+    case "web":
+      return `web-${options.bundler ?? "rsbuild"}`;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The workspace-root tree an app template owns: root manifest, workspace and
+ * turbo config, CI workflow, and the app package itself. Paths are relative to
+ * the scaffold target, not to a package directory.
+ */
+export async function renderAppTemplate(
+  options: ScaffoldOptions,
+): Promise<Map<string, string> | undefined> {
+  const directory = appTemplateDirectory(options);
+
+  if (!directory) {
+    return undefined;
+  }
+
+  return new Map(
+    [...(await renderTemplateDirectory(directory, options))].map(
+      ([filename, contents]) => [
+        TEMPLATE_FILENAME_ALIASES.get(filename) ?? filename,
+        contents,
+      ],
+    ),
+  );
 }

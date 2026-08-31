@@ -1,0 +1,18 @@
+{
+  "name": "{{APP_NAME}}",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "build:theme": "pnpm --filter {{scope}}/theme build",
+    "check:theme": "pnpm --filter {{scope}}/theme tokens:check",
+    "typecheck": "turbo run typecheck"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.13.1"
+}
