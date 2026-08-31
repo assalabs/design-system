@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import process from "node:process";
 import test from "node:test";
 import { fileURLToPath, URL } from "node:url";
 import { differenceEuclidean, oklch, parse } from "culori";
@@ -33,10 +34,15 @@ const CORPUS = [
   "#808080",
   "#00ff00",
   "#fff5f5",
+  // On the sRGB gamut boundary: `oklch -> clampChroma -> formatHex` is NOT an
+  // identity here (#0000ff round-trips to #0031e5), so this is the only corpus
+  // seed whose anchor step can tell the short-circuit in `buildRamp` from its
+  // absence. Every other seed round-trips by luck.
+  "#0000ff",
 ];
 
 /** Seeds with real chroma at a mid lightness: hue survives gamut mapping. */
-const CHROMATIC_MID = ["#FF3131", "#123456", "#00ff00"];
+const CHROMATIC_MID = ["#FF3131", "#123456", "#00ff00", "#0000ff"];
 
 /** Seeds culori reports as `c === 0` / `h === undefined` on both sides. */
 const ACHROMATIC = ["#000000", "#ffffff", "#808080"];
@@ -154,6 +160,9 @@ test("the anchor step reproduces the seed hex exactly", () => {
     ["#123456", 900],
     ["#ffffff", 50],
     ["#000000", 950],
+    // Gamut-boundary seed: without `buildRamp`'s anchor short-circuit this
+    // emits #0031e5 (deltaE 0.048), so it is what makes this test killable.
+    ["#0000ff", 700],
   ];
   for (const [brand, anchor] of expected) {
     const { primitives, anchors } = generatePalette({ brand });
@@ -375,6 +384,13 @@ test("generatePalette is pure and matches the committed snapshot", () => {
   }
 
   if (!existsSync(SNAPSHOT)) {
+    // Writing the snapshot and then asserting against what was just written
+    // makes any regression self-blessing: delete the file, re-run, green.
+    // A missing snapshot has to fail unless a human opted in.
+    assert.ok(
+      process.env.UPDATE_SNAPSHOTS === "1",
+      `snapshot missing: ${SNAPSHOT} - re-create deliberately with UPDATE_SNAPSHOTS=1`,
+    );
     writeFileSync(SNAPSHOT, `${JSON.stringify(first, null, 2)}\n`);
   }
   const snapshot = JSON.parse(readFileSync(SNAPSHOT, "utf8"));
