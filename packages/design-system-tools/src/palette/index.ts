@@ -41,8 +41,10 @@ export interface PaletteResult {
  * One seed color in, a full DTCG palette out. Pure: no IO, no randomness, no
  * time, so two calls with the same input produce identical strings.
  *
- * Throws `PaletteError` on an invalid seed hex (validated in `deriveSeeds`, the
- * single hex validator) or when no candidate satisfies a contrast pair.
+ * Every user-facing failure is a `PaletteError`: an invalid `--brand`,
+ * `--neutral` or `--accent` hex (validated in `deriveSeeds`, the single hex
+ * validator), a role whose candidate list never satisfies its contrast pair,
+ * and an exhausted brand/`fg.onBrand` joint walk (both from `selectRoles`).
  */
 export function generatePalette(input: PaletteInput): PaletteResult {
   const seeds = deriveSeeds(input);

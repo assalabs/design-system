@@ -250,14 +250,19 @@ async function palette(args: string[], configArgument?: string): Promise<void> {
   const outputs = paletteOutputs(loaded, result.files);
 
   if (!args.includes("--force")) {
-    for (const output of outputs) {
-      const destination = resolve(loaded.rootDirectory, output.filename);
+    // Report every file that would be clobbered, not just the first one, so a
+    // single run tells the user the full cost of adding --force.
+    const existing = outputs
+      .map((output) => resolve(loaded.rootDirectory, output.filename))
+      .filter((destination) => existsSync(destination))
+      .map(
+        (destination) => relative(process.cwd(), destination) || destination,
+      );
 
-      if (existsSync(destination)) {
-        throw new Error(
-          `Refusing to overwrite ${relative(process.cwd(), destination) || destination} (use --force)`,
-        );
-      }
+    if (existing.length > 0) {
+      throw new PaletteError(
+        `Refusing to overwrite ${existing.join(", ")} (use --force)`,
+      );
     }
   }
 
@@ -299,6 +304,9 @@ async function main(): Promise<void> {
   }
 }
 
+// Every failure reaches the user as one stderr line and exit 1 — no stack
+// trace. PaletteError (invalid seed hex, unsatisfiable contrast pair,
+// exhausted brand walk, refused overwrite) is always routed through here.
 main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
