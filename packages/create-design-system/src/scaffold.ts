@@ -45,6 +45,11 @@ function validateOptions(options: ScaffoldOptions): void {
   }
 }
 
+// A file here is not a monorepo marker -- a fresh `git init` + `README.md` is
+// one of the most common starting states -- so keep the user's copy and skip
+// ours instead of refusing to scaffold at all.
+const SKIPPABLE_TEMPLATE_FILES = new Set(["README.md"]);
+
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path);
@@ -88,16 +93,27 @@ export async function scaffoldDesignSystem(
   );
 
   // App templates own the workspace root, so any file already sitting where the
-  // template writes means this is somebody else's monorepo.
+  // template writes means this is somebody else's monorepo -- except the files
+  // in SKIPPABLE_TEMPLATE_FILES, which say nothing about the directory.
   const appTemplate = await renderAppTemplate(options);
   const appFilenames = appTemplate ? [...appTemplate.keys()].sort() : [];
+  const skippedFilenames: string[] = [];
+  const writableFilenames: string[] = [];
   for (const filename of appFilenames) {
     const destination = resolve(options.cwd, filename);
-    if (await exists(destination)) {
-      throw new Error(
-        `Refusing to overwrite existing file: ${destination}. Use --template none inside an existing monorepo.`,
-      );
+    if (!(await exists(destination))) {
+      writableFilenames.push(filename);
+      continue;
     }
+
+    if (SKIPPABLE_TEMPLATE_FILES.has(filename)) {
+      skippedFilenames.push(filename);
+      continue;
+    }
+
+    throw new Error(
+      `Refusing to overwrite existing file: ${destination}. Use --template none inside an existing monorepo.`,
+    );
   }
 
   for (const entry of packages) {
@@ -130,7 +146,7 @@ export async function scaffoldDesignSystem(
       }
     }
 
-    for (const filename of appFilenames) {
+    for (const filename of writableFilenames) {
       const destination = resolve(options.cwd, filename);
       await mkdir(dirname(destination), { recursive: true });
       await writeFile(destination, appTemplate?.get(filename) ?? "", "utf8");
@@ -142,6 +158,7 @@ export async function scaffoldDesignSystem(
       directory: resolve(options.cwd, "packages/theme"),
       directories: packages.map((entry) => resolve(options.cwd, entry.path)),
       files: filenames.sort(),
+      skipped: skippedFilenames,
     };
   } catch (error) {
     await Promise.all(

@@ -302,6 +302,9 @@ async function main(): Promise<void> {
   for (const filename of result.files) {
     console.log(`CREATE ${filename}`);
   }
+  for (const filename of result.skipped) {
+    console.log(`SKIP   ${filename} (already exists, kept yours)`);
+  }
 
   outro(`Created ${options.name} in ${result.directories.length} packages.`);
   console.log(

@@ -21,4 +21,6 @@ export type ScaffoldResult = {
   directory: string;
   directories: string[];
   files: string[];
+  /** Template files left alone because the target already had them. */
+  skipped: string[];
 };

@@ -244,20 +244,51 @@ test("aliases color.brand.primary to the generated brand anchor step", async () 
 });
 
 test("refuses an app template inside an existing monorepo", async () => {
-  await withWorkspace(async (directory) => {
-    await writeFile(join(directory, "package.json"), "{}\n", "utf8");
+  // A README alongside the marker must not soften the refusal: `package.json`
+  // and `turbo.json` are the markers, and either one alone is still fatal.
+  for (const marker of ["package.json", "turbo.json"]) {
+    await withWorkspace(async (directory) => {
+      await writeFile(join(directory, marker), "{}\n", "utf8");
+      await writeFile(join(directory, "README.md"), "# mine\n", "utf8");
 
-    await assert.rejects(
-      scaffoldDesignSystem({
-        cwd: directory,
-        name: "Example",
-        scope: "@example",
-        prefix: "ex",
-        template: "expo",
-        brand: "#3366ff",
-      }),
-      /Refusing to overwrite existing file/,
-    );
-    await assert.rejects(access(join(directory, "packages/theme")));
+      await assert.rejects(
+        scaffoldDesignSystem({
+          cwd: directory,
+          name: "Example",
+          scope: "@example",
+          prefix: "ex",
+          template: "expo",
+          brand: "#3366ff",
+        }),
+        /Refusing to overwrite existing file/,
+      );
+      await assert.rejects(access(join(directory, "packages/theme")));
+    });
+  }
+});
+
+test("scaffolds an app template over a lone README and keeps it byte-identical", async () => {
+  await withWorkspace(async (directory) => {
+    // `git init` + `README.md` is a normal starting state, not a monorepo.
+    const readme = join(directory, "README.md");
+    const original = "# mine\n\nNotes written before scaffolding.\n";
+    await writeFile(readme, original, "utf8");
+
+    const result = await scaffoldDesignSystem({
+      cwd: directory,
+      name: "Example",
+      scope: "@example",
+      prefix: "ex",
+      template: "expo",
+      brand: "#3366ff",
+    });
+
+    assert.equal(await readFile(readme, "utf8"), original);
+    assert.deepEqual(result.skipped, ["README.md"]);
+    assert.ok(!result.files.includes("README.md"));
+    // The rest of the template still lands.
+    assert.ok(result.files.includes("package.json"));
+    assert.ok(result.files.includes("turbo.json"));
+    assert.ok(result.files.includes("apps/mobile/App.tsx"));
   });
 });
