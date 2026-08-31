@@ -1,0 +1,30 @@
+{
+  "name": "@assalabs/design-system-workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo build",
+    "changeset": "changeset",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:pack",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "turbo lint",
+    "publish-packages": "changeset publish",
+    "release": "pnpm build && changeset publish",
+    "test": "turbo test",
+    "test:pack": "node scripts/verify-design-system-pack.mjs",
+    "typecheck": "turbo typecheck",
+    "version-packages": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/cli": "2.31.1",
+    "prettier": "^3.7.4",
+    "turbo": "^2.5.4",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.13.1"
+}

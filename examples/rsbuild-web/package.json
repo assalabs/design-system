@@ -1,0 +1,26 @@
+{
+  "name": "@assalabs/design-system-web-example",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rsbuild build",
+    "dev": "rsbuild dev",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@assalabs/design-system-example-theme": "workspace:*",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@assalabs/eslint-config": "^0.1.1",
+    "@rsbuild/core": "^1.6.14",
+    "@rsbuild/plugin-react": "^1.4.2",
+    "@types/react": "~19.2.2",
+    "@types/react-dom": "~19.2.3",
+    "eslint": "^9.39.2",
+    "typescript": "~6.0.3"
+  }
+}

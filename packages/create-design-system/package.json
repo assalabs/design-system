@@ -1,0 +1,57 @@
+{
+  "name": "@assalabs/create-design-system",
+  "version": "0.1.0",
+  "description": "Bootstrap a cross-platform DTCG design system",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "create-assalabs-design-system": "./bin/create-assalabs-design-system.mjs"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    "template/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts --format esm --target node22 --dts --clean",
+    "lint": "eslint .",
+    "test": "node --test test/*.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@assalabs/eslint-config": "^0.1.1",
+    "@tsconfig/recommended": "^1.0.8",
+    "@types/node": "^24.10.1",
+    "eslint": "^9.39.2",
+    "tsup": "^8.5.1",
+    "typescript": "~6.0.3"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.7.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/assalabs/design-system.git",
+    "directory": "packages/create-design-system"
+  },
+  "homepage": "https://github.com/assalabs/design-system#readme",
+  "bugs": {
+    "url": "https://github.com/assalabs/design-system/issues"
+  }
+}

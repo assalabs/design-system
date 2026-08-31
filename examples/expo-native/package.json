@@ -1,0 +1,30 @@
+{
+  "name": "@assalabs/design-system-native-example",
+  "version": "0.1.0",
+  "private": true,
+  "main": "node_modules/expo/AppEntry.js",
+  "scripts": {
+    "android": "expo start --android",
+    "build": "tsc --noEmit",
+    "bundle": "node scripts/export.mjs",
+    "dev": "expo start",
+    "ios": "expo start --ios",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@assalabs/design-system-example-theme": "workspace:*",
+    "expo": "~55.0.0",
+    "react": "19.2.3",
+    "react-native": "0.83.0"
+  },
+  "devDependencies": {
+    "@assalabs/eslint-config": "^0.1.1",
+    "@babel/core": "^7.25.2",
+    "@types/react": "~19.2.0",
+    "babel-preset-expo": "~13.0.0",
+    "eslint": "^9.39.2",
+    "eslint-config-expo": "~55.0.0",
+    "typescript": "~5.8.3"
+  }
+}

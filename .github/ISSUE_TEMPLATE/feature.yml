@@ -1,0 +1,26 @@
+name: Feature request
+description: Propose a focused addition backed by a real consumer need.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Consumer problem
+      description: Describe the workflow or product constraint this would solve.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed contract
+      description: Explain the CLI, generated source, or token behavior you expect.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true

@@ -1,0 +1,32 @@
+{
+  "name": "Starter design system",
+  "version": "2025.10",
+  "sets": {
+    "primitives": {
+      "sources": [
+        { "$ref": "./primitives/colors.tokens.json" },
+        { "$ref": "./primitives/dimensions.tokens.json" },
+        { "$ref": "./primitives/typography.tokens.json" },
+        { "$ref": "./primitives/motion.tokens.json" }
+      ]
+    },
+    "semantic-base": {
+      "sources": [{ "$ref": "./semantic/base.tokens.json" }]
+    }
+  },
+  "modifiers": {
+    "theme": {
+      "description": "Color appearance",
+      "default": "light",
+      "contexts": {
+        "light": [{ "$ref": "./semantic/light.tokens.json" }],
+        "dark": [{ "$ref": "./semantic/dark.tokens.json" }]
+      }
+    }
+  },
+  "resolutionOrder": [
+    { "$ref": "#/sets/primitives" },
+    { "$ref": "#/sets/semantic-base" },
+    { "$ref": "#/modifiers/theme" }
+  ]
+}

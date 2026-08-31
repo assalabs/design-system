@@ -1,0 +1,143 @@
+.button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: var(--{{PREFIX}}-dimension-space-3)
+    var(--{{PREFIX}}-dimension-space-6);
+  border: 1px solid transparent;
+  border-radius: var(--{{PREFIX}}-dimension-radius-pill);
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--{{PREFIX}}-font-weight-semibold);
+  transition-duration: var(--{{PREFIX}}-motion-duration-fast);
+  transition-property: background-color, border-color, color, opacity;
+}
+
+.button:focus-visible,
+.checkbox:focus-visible,
+.switch:focus-visible {
+  outline: 3px solid var(--{{PREFIX}}-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.buttonPrimary {
+  border-color: var(--{{PREFIX}}-color-action-primary-background);
+  background: var(--{{PREFIX}}-color-action-primary-background);
+  color: var(--{{PREFIX}}-color-action-primary-foreground);
+}
+
+.buttonPrimary:active {
+  background: var(--{{PREFIX}}-color-action-primary-pressed);
+}
+
+.buttonSecondary {
+  border-color: var(--{{PREFIX}}-color-border-default);
+  background: var(--{{PREFIX}}-color-surface-card);
+  color: var(--{{PREFIX}}-color-text-primary);
+}
+
+.field {
+  display: grid;
+  gap: var(--{{PREFIX}}-dimension-space-2);
+  font-family: var(--{{PREFIX}}-font-family-sans);
+}
+
+.label {
+  color: var(--{{PREFIX}}-color-text-primary);
+  font-size: var(--{{PREFIX}}-font-size-sm);
+  font-weight: var(--{{PREFIX}}-font-weight-semibold);
+}
+
+.input {
+  min-height: 44px;
+  padding: var(--{{PREFIX}}-dimension-space-3)
+    var(--{{PREFIX}}-dimension-space-4);
+  border: 1px solid var(--{{PREFIX}}-color-border-default);
+  border-radius: var(--{{PREFIX}}-dimension-radius-md);
+  background: var(--{{PREFIX}}-color-surface-card);
+  color: var(--{{PREFIX}}-color-text-primary);
+  font: inherit;
+}
+
+.input:focus {
+  border-color: var(--{{PREFIX}}-color-focus-ring);
+  outline: none;
+}
+
+.supportingText,
+.errorText {
+  margin: 0;
+  font-size: var(--{{PREFIX}}-font-size-sm);
+}
+
+.supportingText {
+  color: var(--{{PREFIX}}-color-text-secondary);
+}
+
+.errorText {
+  color: var(--{{PREFIX}}-color-feedback-error-foreground);
+}
+
+.controlLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--{{PREFIX}}-dimension-space-2);
+  color: var(--{{PREFIX}}-color-text-primary);
+  cursor: pointer;
+  font-family: var(--{{PREFIX}}-font-family-sans);
+}
+
+.checkbox {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--{{PREFIX}}-color-border-default);
+  border-radius: 4px;
+  background: var(--{{PREFIX}}-color-surface-card);
+  color: var(--{{PREFIX}}-color-action-primary-foreground);
+}
+
+.checkbox[data-checked] {
+  border-color: var(--{{PREFIX}}-color-action-primary-background);
+  background: var(--{{PREFIX}}-color-action-primary-background);
+}
+
+.switch {
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  width: 44px;
+  height: 24px;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--{{PREFIX}}-dimension-radius-pill);
+  background: var(--{{PREFIX}}-color-border-default);
+  cursor: pointer;
+}
+
+.switch[data-checked] {
+  background: var(--{{PREFIX}}-color-action-primary-background);
+}
+
+.switchThumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--{{PREFIX}}-color-surface-card);
+  transform: translateX(0);
+  transition: transform var(--{{PREFIX}}-motion-duration-fast);
+}
+
+.switchThumb[data-checked] {
+  transform: translateX(20px);
+}

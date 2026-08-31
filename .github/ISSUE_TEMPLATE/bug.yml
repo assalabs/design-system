@@ -1,0 +1,48 @@
+name: Bug report
+description: Report a reproducible compiler, generator, or template defect.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve the project. Do not report security vulnerabilities here; follow SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: Package and version
+      placeholder: "@assalabs/create-design-system@0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: adapter
+    attributes:
+      label: Adapter
+      options:
+        - Tokens only
+        - StyleX
+        - CSS Modules
+        - Unistyles
+        - Multiple adapters
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Include the command, configuration, and smallest repository or code sample that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: "Node, package manager, framework, OS, React or React Native version"
+    validations:
+      required: true
