@@ -108,7 +108,21 @@ export async function loadDesignSystemConfig(
   }
 
   const moduleUrl = `${pathToFileURL(configPath).href}?updated=${Date.now()}`;
-  const loaded = (await import(moduleUrl)) as { default?: DesignSystemConfig };
+  let loaded: { default?: DesignSystemConfig };
+
+  try {
+    // The config is real user-authored ESM, so anything it throws while loading
+    // arrives here unchanged: a syntax error is a bare "Unexpected end of
+    // input" whose stack is pure Node module-loader frames, naming no file at
+    // all. Prefixing the path is the only thing that tells the user which file
+    // to open; `cause` keeps the original stack for --debug.
+    loaded = (await import(moduleUrl)) as { default?: DesignSystemConfig };
+  } catch (error) {
+    throw new Error(
+      `Could not load ${configPath}: ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
+  }
 
   if (!loaded.default) {
     throw new Error(`No default export was found in ${configPath}.`);

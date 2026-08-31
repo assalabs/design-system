@@ -122,8 +122,6 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
     web: valueAfter(args, "--web") as WebAdapter | undefined,
     native: valueAfter(args, "--native") as NativeAdapter | undefined,
   };
-  const bundler = supplied.bundler ?? defaults.bundler;
-
   if (hasFlag(args, "--yes")) {
     if (!supplied.brand) {
       throw new Error("--brand is required with --yes");
@@ -134,7 +132,7 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
       scope: supplied.scope ?? defaults.scope,
       prefix: supplied.prefix ?? defaults.prefix,
       template: supplied.template ?? defaults.template,
-      bundler,
+      bundler: supplied.bundler ?? defaults.bundler,
       brand: assertHex("--brand", supplied.brand),
       neutral: supplied.neutral ? assertNeutral(supplied.neutral) : undefined,
       accent: supplied.accent
@@ -187,6 +185,24 @@ async function parseOptions(args: string[]): Promise<ScaffoldOptions> {
         ],
       }),
     );
+  // `--bundler` only selects between the two web templates, so it is asked
+  // right after the template and only when "web" was chosen. Without this
+  // prompt the flag is reachable from the command line alone and an
+  // interactive "web" run always silently produces the rsbuild template.
+  const bundler =
+    supplied.bundler ??
+    (template === "web"
+      ? unwrap(
+          await select<Bundler>({
+            message: "Web bundler",
+            initialValue: defaults.bundler,
+            options: [
+              { value: "rsbuild", label: "Rsbuild", hint: "recommended" },
+              { value: "vite", label: "Vite" },
+            ],
+          }),
+        )
+      : defaults.bundler);
   const brand = supplied.brand
     ? assertHex("--brand", supplied.brand)
     : unwrap(
