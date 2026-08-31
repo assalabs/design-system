@@ -1,6 +1,6 @@
 {
   "name": "@assalabs/design-system-tools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Standards-based design token tooling for web and React Native",
   "license": "MIT",
   "type": "module",
