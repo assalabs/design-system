@@ -81,6 +81,9 @@ importers:
       '@terrazzo/plugin-css':
         specifier: 2.5.0
         version: 2.5.0(@terrazzo/cli@2.7.1(@types/node@24.13.3)(esbuild@0.27.7)(jiti@2.7.0)(terser@5.50.0))(@terrazzo/parser@2.5.0(yaml-to-momoa@0.1.0))
+      '@terrazzo/token-tools':
+        specifier: 2.7.1
+        version: 2.7.1
       chokidar:
         specifier: 5.0.0
         version: 5.0.0

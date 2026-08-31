@@ -10,6 +10,7 @@ import { fileURLToPath, URL } from "node:url";
 import {
   contrastRatio,
   defineDesignSystem,
+  generateDesignSystem,
   nativeThemePlugin,
   toNativeTokenValue,
 } from "../dist/index.js";
@@ -46,6 +47,76 @@ async function waitFor(predicate, diagnostics, timeout = 10_000) {
       );
     }
     await delay(25);
+  }
+}
+
+const EXAMPLE_TOKENS = fileURLToPath(
+  new URL("../../../examples/theme/tokens/", import.meta.url),
+);
+
+/**
+ * Builds a throwaway theme from the example tokens with the StyleX adapter
+ * switched on, so the adapter is exercised through the real Terrazzo pipeline
+ * rather than against a hand-written token fixture.
+ */
+async function generateWithStylex(mutate) {
+  const directory = await mkdtemp(join(tmpdir(), "assalabs-ds-stylex-"));
+
+  try {
+    await cp(EXAMPLE_TOKENS, join(directory, "tokens"), { recursive: true });
+    await mutate?.(directory);
+
+    const outputs = await generateDesignSystem({
+      config: defineDesignSystem({
+        name: "StyleX test",
+        prefix: "ds",
+        source: "./tokens/theme.resolver.json",
+        themes: ["light", "dark"],
+        defaultTheme: "light",
+        outputs: {
+          css: "styles/generated.css",
+          stylex: { file: "src/generated/tokens.stylex.ts" },
+        },
+      }),
+      configPath: join(directory, "design-system.config.mjs"),
+      rootDirectory: directory,
+    });
+
+    const find = (filename) => {
+      const output = outputs.find((entry) => entry.filename === filename);
+      assert.ok(output, `Expected the build to emit ${filename}`);
+      return String(output.contents);
+    };
+
+    return {
+      css: find("styles/generated.css"),
+      stylex: find("src/generated/tokens.stylex.ts"),
+    };
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+}
+
+/** Body of the first `selector { ... }` rule in an unminified stylesheet. */
+function ruleBody(css, selector) {
+  const match = css.match(
+    new RegExp(`(?:^|\\n)${selector.replaceAll(/[[\]"]/g, "\\$&")} \\{\\n`),
+  );
+  assert.ok(match, `Expected a ${selector} rule`);
+  const start = match.index + match[0].length;
+  return css.slice(start, css.indexOf("\n}", start));
+}
+
+/** Adds a camelCase colour role to both theme contexts of a copied token set. */
+async function addCamelCaseRole(directory) {
+  for (const [theme, primitive] of [
+    ["light", "neutral.950"],
+    ["dark", "white"],
+  ]) {
+    const path = join(directory, "tokens/semantic", `${theme}.tokens.json`);
+    const tokens = JSON.parse(await readFile(path, "utf8"));
+    tokens.color.text.onSurface = { $value: `{color.primitive.${primitive}}` };
+    await writeFile(path, `${JSON.stringify(tokens, null, 2)}\n`);
   }
 }
 
@@ -270,3 +341,83 @@ test(
     }
   },
 );
+
+test("the StyleX adapter aliases the generated custom properties for themed tokens", async () => {
+  const { css, stylex } = await generateWithStylex();
+
+  // StyleX 0.19 reads every non-`default` key of a value object as an at-rule,
+  // so a `:root[data-theme="dark"]` key lowers to a dead descendant selector.
+  // The adapter must not emit one.
+  assert.doesNotMatch(stylex, /data-theme/);
+  assert.doesNotMatch(stylex, /prefers-color-scheme/);
+  assert.doesNotMatch(stylex, /\{\s*default:/);
+
+  assert.match(stylex, /surfaceCanvas: "var\(--ds-color-surface-canvas\)"/);
+  assert.match(stylex, /textPrimary: "var\(--ds-color-text-primary\)"/);
+
+  // Groups that are the same in both themes stay literal, so StyleX can inline
+  // them without depending on the stylesheet at all.
+  const spacing = stylex.match(
+    /export const spacing = stylex\.defineVars\(\{[^}]*\}\)/,
+  );
+  assert.ok(spacing, "Expected a spacing group");
+  assert.doesNotMatch(spacing[0], /var\(/);
+  assert.match(spacing[0], /"\d+px"/);
+
+  // Every referenced property must exist in all three theme scopes, otherwise
+  // the StyleX variable resolves to nothing in one of them.
+  const referenced = [
+    ...new Set([...stylex.matchAll(/var\((--ds-[\w-]+)\)/g)].map((m) => m[1])),
+  ];
+  assert.ok(referenced.length > 0, "Expected themed tokens to be aliased");
+
+  for (const scope of [
+    ":root",
+    '[data-theme="light"]',
+    '[data-theme="dark"]',
+  ]) {
+    const body = ruleBody(css, scope);
+    const missing = referenced.filter((name) => !body.includes(`\n  ${name}:`));
+    assert.deepEqual(missing, [], `Undeclared in ${scope}`);
+  }
+
+  // The whole point: flipping data-theme has to change the resolved value.
+  const canvas = /--ds-color-surface-canvas: (.+);/;
+  assert.notEqual(
+    ruleBody(css, '[data-theme="light"]').match(canvas)[1],
+    ruleBody(css, '[data-theme="dark"]').match(canvas)[1],
+  );
+});
+
+test("the StyleX adapter references the name plugin-css really declares", async () => {
+  const { css, stylex } = await generateWithStylex(addCamelCaseRole);
+
+  // `@terrazzo/plugin-css` runs our `variableName` back through `makeCSSVar`,
+  // which kebab-cases it, so `color.text.onSurface` is declared as
+  // `--ds-color-text-on-surface`. Only alias tokens get the raw camelCase name
+  // as well, so the kebab form is the one an adapter can rely on.
+  assert.match(stylex, /textOnSurface: "var\(--ds-color-text-on-surface\)"/);
+  assert.doesNotMatch(stylex, /--ds-color-text-onSurface/);
+  assert.match(
+    ruleBody(css, '[data-theme="dark"]'),
+    /\n {2}--ds-color-text-on-surface:/,
+  );
+});
+
+test("defineDesignSystem refuses a StyleX output without a CSS output", () => {
+  assert.throws(
+    () =>
+      defineDesignSystem({
+        name: "StyleX without CSS",
+        prefix: "ds",
+        source: "./tokens/theme.resolver.json",
+        themes: ["light", "dark"],
+        defaultTheme: "light",
+        outputs: {
+          native: "src/generated/themes.ts",
+          stylex: { file: "src/generated/tokens.stylex.ts" },
+        },
+      }),
+    /outputs\.stylex requires outputs\.css/,
+  );
+});

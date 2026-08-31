@@ -64,6 +64,12 @@ export function defineDesignSystem(
 
   if (config.outputs.stylex) {
     assertContainedOutput("stylex.file", config.outputs.stylex.file);
+
+    if (!config.outputs.css) {
+      throw new Error(
+        "outputs.stylex requires outputs.css because the generated StyleX variables reference the stylesheet's custom properties.",
+      );
+    }
   }
 
   if (config.outputs.unistyles) {

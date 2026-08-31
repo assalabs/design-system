@@ -8,6 +8,7 @@ import {
   type TokenNormalized,
 } from "@terrazzo/parser";
 import css from "@terrazzo/plugin-css";
+import { requestedCssVariable } from "./adapters/shared.js";
 import { emitStylex } from "./adapters/stylex/index.js";
 import { emitUnistyles } from "./adapters/unistyles/index.js";
 import { nativeThemePlugin } from "./nativePlugin.js";
@@ -93,8 +94,7 @@ export async function generateDesignSystem(
       css({
         filename: config.outputs.css,
         legacyHex: true,
-        variableName: (token) =>
-          `--${config.prefix}-${token.id.split(".").join("-")}`,
+        variableName: (token) => requestedCssVariable(config.prefix, token.id),
         permutations: cssPermutations(
           config.themes,
           config.defaultTheme,
