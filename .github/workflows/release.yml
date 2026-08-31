@@ -41,6 +41,8 @@ jobs:
 
   select-mode:
     name: Select release mode
+    # Gates every downstream job: a manual run from a branch must never publish.
+    if: github.ref == 'refs/heads/main'
     needs: check
     runs-on: ubuntu-latest
     permissions:
