@@ -19,12 +19,16 @@ try {
     "package/template/ui-web/stylex/src/Button.tsx",
     "package/template/ui-web/css-modules/src/Button.tsx",
     "package/template/ui-native/unistyles/src/Button.tsx",
+    "package/template/expo/apps/mobile/App.tsx",
+    "package/template/web-rsbuild/apps/web/rsbuild.config.ts",
+    "package/template/web-vite/apps/web/vite.config.ts",
   ];
-  if (
-    requiredTemplates.some((filename) => !archiveListing.includes(filename))
-  ) {
+  const missingTemplates = requiredTemplates.filter(
+    (filename) => !archiveListing.includes(filename),
+  );
+  if (missingTemplates.length > 0) {
     throw new Error(
-      "Published initializer archive is missing one or more adapter templates.",
+      `Published initializer archive is missing templates: ${missingTemplates.join(", ")}.`,
     );
   }
 
