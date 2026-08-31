@@ -8,6 +8,8 @@ export {
   generateDesignSystem,
   writeGeneratedOutputs,
 } from "./build.js";
+export { emitStylex } from "./adapters/stylex/index.js";
+export { emitUnistyles } from "./adapters/unistyles/index.js";
 export {
   assertNativeThemeNames,
   nativeThemePlugin,
@@ -19,6 +21,8 @@ export type {
   DesignSystemConfig,
   GeneratedOutput,
   LoadedDesignSystemConfig,
+  StylexOutput,
+  UnistylesOutput,
 } from "./types.js";
 export { buildRamp, STEPS } from "./palette/ladder.js";
 export type { Ramp, Step, BuildRampResult } from "./palette/ladder.js";
