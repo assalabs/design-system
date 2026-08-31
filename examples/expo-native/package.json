@@ -16,7 +16,7 @@
     "@assalabs/design-system-example-theme": "workspace:*",
     "expo": "~55.0.0",
     "react": "19.2.3",
-    "react-native": "0.83.0"
+    "react-native": "0.87.1"
   },
   "devDependencies": {
     "@assalabs/eslint-config": "^0.1.1",
