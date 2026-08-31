@@ -1,57 +1,15 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { installPackedInitializer, packPackages, run } from "./lib/pack.mjs";
 
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temporaryRoot = await mkdtemp(join(tmpdir(), "assalabs-ds-pack-"));
 
-function run(command, args, cwd = repositoryRoot) {
-  execFileSync(command, args, {
-    cwd,
-    env: { ...process.env, CI: "1" },
-    stdio: "inherit",
-  });
-}
-
-async function packedFile(fragment) {
-  const filenames = await readdir(temporaryRoot);
-  const filename = filenames.find(
-    (candidate) => candidate.includes(fragment) && candidate.endsWith(".tgz"),
-  );
-  if (!filename) {
-    throw new Error(`Could not find packed ${fragment} package.`);
-  }
-  return join(temporaryRoot, filename);
-}
-
 try {
-  run("npm", [
-    "pack",
-    resolve(repositoryRoot, "packages/design-system-tools"),
-    "--pack-destination",
-    temporaryRoot,
-    "--silent",
-  ]);
-  run("npm", [
-    "pack",
-    resolve(repositoryRoot, "packages/create-design-system"),
-    "--pack-destination",
-    temporaryRoot,
-    "--silent",
-  ]);
-
-  const toolsArchive = await packedFile("design-system-tools");
-  const createArchive = await packedFile("create-design-system");
+  const { toolsArchive, createArchive } = await packPackages(temporaryRoot);
   const archiveListing = execFileSync("tar", ["-tf", createArchive], {
     encoding: "utf8",
   });
@@ -70,38 +28,16 @@ try {
     );
   }
 
-  await writeFile(
-    join(temporaryRoot, "package.json"),
-    `${JSON.stringify({ private: true }, null, 2)}\n`,
-  );
-
-  // `npm pack` keeps `workspace:*` verbatim, so install the initializer from an
-  // extracted copy whose tools dependency points at the packed tools tarball.
-  const extractedRoot = join(temporaryRoot, "initializer");
-  await mkdir(extractedRoot, { recursive: true });
-  run("tar", ["-xf", createArchive, "-C", extractedRoot]);
-  const createPackagePath = join(extractedRoot, "package/package.json");
-  const createPackage = JSON.parse(await readFile(createPackagePath, "utf8"));
-  createPackage.dependencies["@assalabs/design-system-tools"] =
-    `file:${toolsArchive}`;
-  await writeFile(
-    createPackagePath,
-    `${JSON.stringify(createPackage, null, 2)}\n`,
-  );
-  run(
-    "npm",
-    ["install", "--ignore-scripts", join(extractedRoot, "package")],
-    temporaryRoot,
-  );
+  const initializer = await installPackedInitializer(temporaryRoot, {
+    toolsArchive,
+    createArchive,
+  });
 
   const fixtureRoot = join(temporaryRoot, "fixture");
   run(
     process.execPath,
     [
-      join(
-        temporaryRoot,
-        "node_modules/@assalabs/create-design-system/bin/create-assalabs-design-system.mjs",
-      ),
+      initializer,
       "init",
       "--name",
       "Fixture",
@@ -244,10 +180,7 @@ try {
   run(
     process.execPath,
     [
-      join(
-        temporaryRoot,
-        "node_modules/@assalabs/create-design-system/bin/create-assalabs-design-system.mjs",
-      ),
+      initializer,
       "init",
       "--name",
       "CSS Fixture",
