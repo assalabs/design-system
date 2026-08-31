@@ -88,7 +88,7 @@ Options:
   --prefix prefix   CSS custom-property prefix
   --template name   expo, web, or none (default: none)
   --bundler name    rsbuild or vite (default: rsbuild; --template web only)
-  --brand hex       Brand seed colour, such as #FF3131
+  --brand hex       Brand seed colour, such as "#FF3131" (quote the #)
   --neutral value   Neutral seed hex or "gray" (default: derived from brand hue)
   --accent hex      Accent seed hex (default: brand hue rotated by 150 degrees)
   --web adapter     stylex, css-modules, or none
