@@ -20,11 +20,11 @@
   },
   "devDependencies": {
     "@assalabs/eslint-config": "^0.1.1",
-    "@babel/core": "^7.25.2",
+    "@babel/core": "^8.0.1",
     "@types/react": "~19.2.0",
-    "babel-preset-expo": "~13.0.0",
-    "eslint": "^9.39.2",
-    "eslint-config-expo": "~55.0.0",
-    "typescript": "~5.8.3"
+    "babel-preset-expo": "~57.0.9",
+    "eslint": "^10.9.1",
+    "eslint-config-expo": "~57.0.2",
+    "typescript": "~7.0.2"
   }
 }
