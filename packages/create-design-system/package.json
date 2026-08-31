@@ -31,10 +31,10 @@
   "devDependencies": {
     "@assalabs/eslint-config": "^0.1.1",
     "@tsconfig/recommended": "^1.0.8",
-    "@types/node": "^24.10.1",
-    "eslint": "^9.39.2",
+    "@types/node": "^26.4.0",
+    "eslint": "^10.9.1",
     "tsup": "^8.5.1",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "engines": {
     "node": ">=22"
