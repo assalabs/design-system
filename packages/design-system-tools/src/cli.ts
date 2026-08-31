@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { existsSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import chokidar from "chokidar";
 import {
@@ -8,7 +9,15 @@ import {
   writeGeneratedOutputs,
 } from "./build.js";
 import { loadDesignSystemConfig } from "./config.js";
-import type { LoadedDesignSystemConfig } from "./types.js";
+import { PaletteError, type PaletteInput } from "./palette/derive.js";
+import { generatePalette } from "./palette/index.js";
+import type { GeneratedOutput, LoadedDesignSystemConfig } from "./types.js";
+
+const PALETTE_FILENAMES = [
+  "primitives/colors.tokens.json",
+  "semantic/light.tokens.json",
+  "semantic/dark.tokens.json",
+] as const;
 
 function readFlag(args: string[], flag: string): string | undefined {
   const index = args.indexOf(flag);
@@ -22,6 +31,37 @@ Usage:
   assalabs-ds tokens build [--config path]
   assalabs-ds tokens check [--config path]
   assalabs-ds tokens watch [--config path]
+  assalabs-ds palette --brand "<#RRGGBB>" [options]
+
+Palette derivation: neutral keeps the brand hue at low chroma, accent uses the
+brand hue rotated by 150 degrees, and status ramps use fixed hues.
+Run "assalabs-ds palette --help" for the full palette options.
+`);
+}
+
+function printPaletteHelp(): void {
+  console.log(`assalabs-ds palette
+
+Usage:
+  assalabs-ds palette --brand "<#RRGGBB>" [--neutral "<#RRGGBB>"|gray]
+                      [--accent "<#RRGGBB>"] [--force] [--json] [--config path]
+
+Generates primitives/colors.tokens.json, semantic/light.tokens.json and
+semantic/dark.tokens.json in the token directory of the design system config.
+
+Options:
+  --brand    "<#RRGGBB>"        Required seed color for the brand ramp.
+  --neutral  "<#RRGGBB>"|gray   Neutral seed. Omit to derive, "gray" for achromatic.
+  --accent   "<#RRGGBB>"        Accent seed. Omit to derive.
+  --force                       Overwrite existing token files.
+  --json                        Print the palette to stdout and write nothing.
+  --config   <path>             Config path (default design-system.config.mjs).
+
+Quote seed colors: an unquoted # starts a comment in POSIX shells, so
+--brand #FF3131 arrives with no value at all.
+
+Derivation: neutral = brand hue at low chroma, accent = brand hue + 150 degrees,
+status = fixed hues (success 145, warning 80, danger 25, info 250).
 `);
 }
 
@@ -151,6 +191,80 @@ async function watch(configArgument?: string): Promise<void> {
   );
 }
 
+function paletteOutputs(
+  loaded: LoadedDesignSystemConfig,
+  files: Record<(typeof PALETTE_FILENAMES)[number], string>,
+): GeneratedOutput[] {
+  const directory = tokensDirectory(loaded);
+  return PALETTE_FILENAMES.map((name) => ({
+    filename: relative(loaded.rootDirectory, resolve(directory, name)),
+    contents: files[name],
+  }));
+}
+
+async function palette(args: string[], configArgument?: string): Promise<void> {
+  if (args.includes("--help") || args.includes("-h")) {
+    printPaletteHelp();
+    return;
+  }
+
+  const brand = readFlag(args, "--brand");
+
+  if (brand === undefined) {
+    throw new PaletteError(
+      '--brand is required (for example --brand "#FF3131")',
+    );
+  }
+
+  const input: PaletteInput = { brand };
+  const neutral = readFlag(args, "--neutral");
+  const accent = readFlag(args, "--accent");
+
+  if (neutral !== undefined) {
+    input.neutral = neutral;
+  }
+
+  if (accent !== undefined) {
+    input.accent = accent;
+  }
+
+  const result = generatePalette(input);
+
+  if (args.includes("--json")) {
+    console.log(
+      JSON.stringify(
+        {
+          primitives: result.primitives,
+          anchors: result.anchors,
+          semantic: result.semantic,
+          report: result.report,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  const loaded = await loadDesignSystemConfig(configArgument);
+  const outputs = paletteOutputs(loaded, result.files);
+
+  if (!args.includes("--force")) {
+    for (const output of outputs) {
+      const destination = resolve(loaded.rootDirectory, output.filename);
+
+      if (existsSync(destination)) {
+        throw new Error(
+          `Refusing to overwrite ${relative(process.cwd(), destination) || destination} (use --force)`,
+        );
+      }
+    }
+  }
+
+  await writeGeneratedOutputs(loaded, outputs);
+  console.log(`Wrote ${outputs.length} palette token files.`);
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const configArgument = readFlag(args, "--config");
@@ -171,6 +285,11 @@ async function main(): Promise<void> {
 
   if (command === "tokens" && subcommand === "watch") {
     await watch(configArgument);
+    return;
+  }
+
+  if (command === "palette") {
+    await palette(args, configArgument);
     return;
   }
 
