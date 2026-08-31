@@ -31,7 +31,7 @@ Usage:
   assalabs-ds tokens build [--config path]
   assalabs-ds tokens check [--config path]
   assalabs-ds tokens watch [--config path]
-  assalabs-ds palette --brand <#RRGGBB> [options]
+  assalabs-ds palette --brand "<#RRGGBB>" [options]
 
 Palette derivation: neutral keeps the brand hue at low chroma, accent uses the
 brand hue rotated by 150 degrees, and status ramps use fixed hues.
@@ -43,19 +43,22 @@ function printPaletteHelp(): void {
   console.log(`assalabs-ds palette
 
 Usage:
-  assalabs-ds palette --brand <#RRGGBB> [--neutral <#RRGGBB>|gray]
-                      [--accent <#RRGGBB>] [--force] [--json] [--config path]
+  assalabs-ds palette --brand "<#RRGGBB>" [--neutral "<#RRGGBB>"|gray]
+                      [--accent "<#RRGGBB>"] [--force] [--json] [--config path]
 
 Generates primitives/colors.tokens.json, semantic/light.tokens.json and
 semantic/dark.tokens.json in the token directory of the design system config.
 
 Options:
-  --brand    <#RRGGBB>        Required seed color for the brand ramp.
-  --neutral  <#RRGGBB>|gray   Neutral seed. Omit to derive, "gray" for achromatic.
-  --accent   <#RRGGBB>        Accent seed. Omit to derive.
-  --force                     Overwrite existing token files.
-  --json                      Print the palette to stdout and write nothing.
-  --config   <path>           Config path (default design-system.config.mjs).
+  --brand    "<#RRGGBB>"        Required seed color for the brand ramp.
+  --neutral  "<#RRGGBB>"|gray   Neutral seed. Omit to derive, "gray" for achromatic.
+  --accent   "<#RRGGBB>"        Accent seed. Omit to derive.
+  --force                       Overwrite existing token files.
+  --json                        Print the palette to stdout and write nothing.
+  --config   <path>             Config path (default design-system.config.mjs).
+
+Quote seed colors: an unquoted # starts a comment in POSIX shells, so
+--brand #FF3131 arrives with no value at all.
 
 Derivation: neutral = brand hue at low chroma, accent = brand hue + 150 degrees,
 status = fixed hues (success 145, warning 80, danger 25, info 250).
@@ -208,7 +211,9 @@ async function palette(args: string[], configArgument?: string): Promise<void> {
   const brand = readFlag(args, "--brand");
 
   if (brand === undefined) {
-    throw new PaletteError("--brand is required (for example --brand #FF3131)");
+    throw new PaletteError(
+      '--brand is required (for example --brand "#FF3131")',
+    );
   }
 
   const input: PaletteInput = { brand };
