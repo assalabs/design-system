@@ -5,6 +5,7 @@
     "primitives": {
       "sources": [
         { "$ref": "./primitives/colors.tokens.json" },
+        { "$ref": "./primitives/alpha.tokens.json" },
         { "$ref": "./primitives/dimensions.tokens.json" },
         { "$ref": "./primitives/typography.tokens.json" },
         { "$ref": "./primitives/motion.tokens.json" }
