@@ -1,5 +1,35 @@
 # @assalabs/create-design-system
 
+## 0.4.0
+
+### Minor Changes
+
+- 9a0c0ad: Scaffold `white-alpha` and `black-alpha` primitive ramps.
+
+  New projects now ship `tokens/primitives/alpha.tokens.json` alongside the
+  existing dimensions, typography and motion primitives, with the resolver
+  composing it into the `primitives` set.
+
+  Alpha is a chosen constant rather than something derived from the brand seed,
+  so it belongs beside the other hand-authored primitives instead of in the
+  palette generator. The generator still owns only `primitives/colors.tokens.json`
+  and the two semantic theme files, so it never overwrites this file.
+
+  Steps are denser at the low end, where subtle surfaces and hover states need
+  the resolution, and coarser at the top, where a scrim only needs to be dark.
+
+### Patch Changes
+
+- 3127948: Declare `unplugin` explicitly in the web templates.
+
+  `@stylexjs/unplugin` lists `unplugin` as a peer dependency rather than a direct
+  one. Scaffolded projects were relying on the package manager to install it
+  automatically, which pnpm does by default and npm does not when
+  `legacy-peer-deps` is set. In that case the build fails at config load with
+  `Cannot find package 'unplugin'`.
+
+- @assalabs/design-system-tools@0.4.0
+
 ## 0.3.0
 
 ### Minor Changes
