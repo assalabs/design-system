@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@terrazzo/parser": "2.7.1",
-    "@terrazzo/plugin-css": "2.5.0",
+    "@terrazzo/plugin-css": "2.7.1",
     "@terrazzo/token-tools": "2.7.1",
     "chokidar": "5.0.0",
     "culori": "^4.0.2"
