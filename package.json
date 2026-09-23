@@ -20,10 +20,10 @@
     "version-packages": "changeset version"
   },
   "devDependencies": {
-    "@changesets/cli": "^3.0.1",
-    "prettier": "^3.7.4",
-    "turbo": "^2.5.4",
-    "typescript": "~6.0.3"
+    "@changesets/cli": "^3.0.3",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.2",
+    "typescript": "~7.0.2"
   },
   "engines": {
     "node": ">=22"
